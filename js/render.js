@@ -954,7 +954,11 @@ RENDER._onViewChange = function(view) {
   if (view === 'alertas')     { RENDER.alertasFull(); RENDER.calendarioVenc(); }
   if (view === 'financeiro')  { RENDER.financeiro(); }
   if (view === 'whatsapp')    { RENDER.wppSelects(); }
-  if (view === 'relatorios')  { RENDER.relatorios && RENDER.relatorios(); }
+  if (view === 'relatorios')  { if (RENDER.relatorios) RENDER.relatorios(); }
+  if (view === 'smartnotes')  { if (typeof snPopularSelect==='function') snPopularSelect(); }
+  if (view === 'anamnese')    { if (typeof anaInit==='function') anaInit(); if (typeof snPopularSelect==='function') snPopularSelect(); }
+  if (view === 'cartoes')     { if (typeof cartRender==='function') { snPopularSelect && snPopularSelect(); cartRender(); } }
+  if (view === 'usuarios')    { if (typeof usrRender==='function') usrRender(); }
 };
 
 // renderAlerts definido em main.js

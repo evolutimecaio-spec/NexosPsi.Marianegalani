@@ -355,12 +355,18 @@
     <div id="v-smartnotes" class="view">
       <div style="background:#EAF4FB;border:1px solid #B0D4EC;border-radius:var(--radius);padding:13px 16px;margin-bottom:18px;display:flex;align-items:center;gap:11px;font-size:13px;color:var(--luma)">
         <div class="luma-mark">L</div>
-        <div><strong>LUMA ativada</strong> — Grave a sessão, acompanhe a transcrição ao vivo, e a LUMA gera o rascunho da evolução clínica para você revisar com 1 clique.</div>
+        <div><strong>LUMA ativada</strong> — Selecione o paciente, grave a sessão, acompanhe a transcrição ao vivo e salve a evolução com 1 clique.</div>
       </div>
       <div class="g-sn">
         <div class="col">
           <div class="recorder">
             <div class="card-title"><i class="ti ti-microphone"></i> Gravação da sessão</div>
+            <div class="field" style="margin-bottom:14px">
+              <label>Paciente desta sessão</label>
+              <select id="sn-pac" onchange="snPacienteChanged()">
+                <option value="">Selecione o paciente...</option>
+              </select>
+            </div>
             <div class="rec-panel">
               <div class="rec-timer" id="rec-timer">00:00:00</div>
               <div class="waveform" id="waveform">
@@ -375,7 +381,7 @@
                 <div class="wv" style="height:8px;--h:14px;--d:.5s"></div>
               </div>
               <button class="rec-big-btn idle" id="rec-btn" onclick="toggleRec()"><i class="ti ti-microphone" id="rec-icon"></i></button>
-              <div class="rec-status-label" id="rec-label">Pronto para gravar<br><span style="font-size:11px">Selecione o paciente e clique no microfone</span></div>
+              <div class="rec-status-label" id="rec-label">Selecione o paciente e clique no microfone<br><span style="font-size:11px">para iniciar a gravação</span></div>
             </div>
             <div class="transcript-box">
               <div class="transcript-header"><div class="live-pulse" id="live-pulse" style="display:none"></div> Transcrição ao vivo</div>
@@ -384,86 +390,99 @@
             <div class="luma-draft-box" id="luma-box" style="display:none">
               <div class="luma-hdr">
                 <div class="luma-mark">L</div>
-                <div><div class="luma-title">Rascunho gerado pela LUMA</div><div class="luma-sub">Revise, edite e salve no prontuário com 1 clique</div></div>
+                <div><div class="luma-title">Rascunho gerado pela LUMA</div><div class="luma-sub">Revise e salve no prontuário com 1 clique</div></div>
               </div>
-              <div class="luma-text" id="luma-draft">...</div>
-              <div class="row" style="gap:8px">
+              <div class="luma-text" id="luma-draft" contenteditable="true">...</div>
+              <div class="row" style="gap:8px;margin-top:10px">
                 <button class="btn btn-luma" style="flex:1;justify-content:center" onclick="saveLumaDraft()"><i class="ti ti-device-floppy"></i> Salvar no prontuário</button>
-                <button class="btn btn-ghost"><i class="ti ti-edit"></i> Editar</button>
+                <button class="btn btn-ghost" onclick="document.getElementById('luma-box').style.display='none'"><i class="ti ti-x"></i> Descartar</button>
               </div>
-              <div id="luma-saved" style="display:none;margin-top:10px;font-size:12px;color:var(--success);background:var(--success-bg);padding:8px 12px;border-radius:8px;text-align:center"><i class="ti ti-check"></i> Salvo no prontuário da Ana Silva!</div>
+              <div id="luma-saved" style="display:none;margin-top:10px;font-size:12px;color:var(--success);background:var(--success-bg);padding:8px 12px;border-radius:8px;text-align:center"><i class="ti ti-check"></i> Evolução salva no prontuário!</div>
             </div>
           </div>
         </div>
         <div class="col">
-          <div class="card card-sm">
+          <div class="card card-sm" id="sn-pac-info" style="display:none">
             <div class="card-title" style="margin-bottom:12px"><i class="ti ti-user"></i> Sessão atual</div>
-            <div style="display:flex;align-items:center;gap:10px;padding:11px;background:var(--sage-light);border-radius:8px;margin-bottom:12px">
-              <div style="width:36px;height:36px;border-radius:50%;background:var(--sage);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">AS</div>
-              <div><div style="font-size:13px;font-weight:600;color:var(--sage)">Ana Silva</div><div style="font-size:11px;color:var(--sage-mid)">Sessão #19 · 03/07 · 10h00</div></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:11px;background:var(--teal-light);border-radius:8px;margin-bottom:12px">
+              <div id="sn-av" style="width:36px;height:36px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">?</div>
+              <div><div id="sn-nome" style="font-size:13px;font-weight:600;color:var(--teal)">—</div><div id="sn-meta" style="font-size:11px;color:var(--teal-mid)">—</div></div>
             </div>
-            <div class="field"><label>Modalidade</label><select><option>Terapia Individual</option></select></div>
-            <div class="field"><label>CID</label><input value="F41.1 — Ansiedade generalizada"></div>
+            <div class="field"><label>CID</label><input id="sn-cid" placeholder="Ex: F41.1" value=""></div>
           </div>
           <div class="card card-sm">
-            <div class="card-title"><i class="ti ti-history"></i> Sessões anteriores</div>
-            <div style="font-size:12px;color:var(--text2)">
-              <div style="padding:7px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">#18 · 19 jun<span class="badge badge-luma">LUMA</span></div>
-              <div style="padding:7px 0;border-bottom:1px solid var(--border)">#17 · 12 jun — Manual</div>
-              <div style="padding:7px 0;border-bottom:1px solid var(--border)">#16 · 29 mai — Manual</div>
-              <div style="padding:7px 0;display:flex;align-items:center;justify-content:space-between">#15 · 22 mai<span class="badge badge-luma">LUMA</span></div>
-            </div>
+            <div class="card-title"><i class="ti ti-history"></i> Últimas sessões LUMA</div>
+            <div id="sn-historico" style="font-size:12px;color:var(--text3);padding:8px 0">Selecione um paciente para ver o histórico.</div>
           </div>
           <div class="card card-sm" style="background:var(--luma-light);border-color:#C8BEF0">
             <div class="card-title" style="color:var(--luma)"><i class="ti ti-settings" style="color:var(--luma)"></i> Configurações da LUMA</div>
-            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-bottom:8px"><input type="checkbox" checked style="accent-color:var(--luma)"> Gerar evolução automática</label>
-            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-bottom:8px"><input type="checkbox" checked style="accent-color:var(--luma)"> Usar modelo estruturado</label>
-            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text)"><input type="checkbox" style="accent-color:var(--luma)"> Incluir transcrição no prontuário</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-bottom:8px"><input type="checkbox" checked id="sn-cfg-auto" style="accent-color:var(--luma)"> Gerar evolução automática ao parar</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-bottom:8px"><input type="checkbox" checked id="sn-cfg-modelo" style="accent-color:var(--luma)"> Usar modelo estruturado (TCC)</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text)"><input type="checkbox" id="sn-cfg-transcript" style="accent-color:var(--luma)"> Incluir transcrição no prontuário</label>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ═══ ANAMNESE ═══ -->
+        <!-- ═══ ANAMNESE ═══ -->
     <div id="v-anamnese" class="view">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-        <div style="font-size:13px;color:var(--text2)">Crie formulários e envie ao paciente para preencher antes da primeira sessão.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+        <div style="font-size:13px;color:var(--text2)">Crie formulários de anamnese e envie ao paciente por WhatsApp antes da primeira sessão.</div>
         <button class="btn btn-sage" onclick="openModal('modal-anamnese')"><i class="ti ti-plus"></i> Novo formulário</button>
       </div>
       <div class="ana-layout">
+        <!-- Editor do formulário -->
         <div class="card">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
-            <div><div style="font-size:14px;font-weight:600;color:var(--text)">Anamnese Inicial — Adultos</div><div style="font-size:11px;color:var(--text3);margin-top:2px">12 campos · Modelo padrão editável</div></div>
-            <button class="btn btn-sage" style="font-size:12px" onclick="sendAna()"><i class="ti ti-send"></i> Enviar ao paciente</button>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div>
+              <select id="ana-modelo-sel" onchange="anaSelecionarModelo()" style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;font-family:var(--font);background:var(--warm);color:var(--text)">
+                <option value="adulto">Anamnese Inicial — Adultos</option>
+                <option value="infantil">Anamnese Infantil / Neurodivergente</option>
+                <option value="supervisao">Ficha de Supervisão</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost" style="font-size:12px" onclick="anaEnviar()"><i class="ti ti-brand-whatsapp"></i> Enviar selecionado</button>
+            </div>
           </div>
-          <div id="ana-send-msg" style="display:none;margin-bottom:12px" class="alerta info"><i class="ti ti-check"></i> Anamnese enviada por WhatsApp!</div>
-          <div class="field-row"><i class="ti ti-grip-vertical fr-icon"></i><div class="fr-info"><div class="fr-name">Nome completo</div><div class="fr-type">Texto curto · Obrigatório</div></div><div class="fr-actions"><button><i class="ti ti-edit"></i></button><button><i class="ti ti-trash"></i></button></div></div>
-          <div class="field-row"><i class="ti ti-grip-vertical fr-icon"></i><div class="fr-info"><div class="fr-name">Data de nascimento</div><div class="fr-type">Data · Obrigatório</div></div><div class="fr-actions"><button><i class="ti ti-edit"></i></button><button><i class="ti ti-trash"></i></button></div></div>
-          <div class="field-row"><i class="ti ti-grip-vertical fr-icon"></i><div class="fr-info"><div class="fr-name">Queixa principal / motivo de busca</div><div class="fr-type">Texto longo · Obrigatório</div></div><div class="fr-actions"><button><i class="ti ti-edit"></i></button><button><i class="ti ti-trash"></i></button></div></div>
-          <div class="field-row"><i class="ti ti-grip-vertical fr-icon"></i><div class="fr-info"><div class="fr-name">Histórico de acompanhamento anterior</div><div class="fr-type">Múltipla escolha · Opcional</div></div><div class="fr-actions"><button><i class="ti ti-edit"></i></button><button><i class="ti ti-trash"></i></button></div></div>
-          <div class="field-row"><i class="ti ti-grip-vertical fr-icon"></i><div class="fr-info"><div class="fr-name">Uso de medicação psiquiátrica</div><div class="fr-type">Sim/Não + campo aberto</div></div><div class="fr-actions"><button><i class="ti ti-edit"></i></button><button><i class="ti ti-trash"></i></button></div></div>
-          <div class="field-row"><i class="ti ti-grip-vertical fr-icon"></i><div class="fr-info"><div class="fr-name">Como soube sobre meu trabalho?</div><div class="fr-type">Seleção única · Opcional</div></div><div class="fr-actions"><button><i class="ti ti-edit"></i></button><button><i class="ti ti-trash"></i></button></div></div>
-          <button style="width:100%;border:1px dashed var(--border);border-radius:8px;padding:10px;background:none;color:var(--text3);cursor:pointer;font-size:13px;margin-top:8px;font-family:var(--font)"><i class="ti ti-plus"></i> Adicionar campo</button>
+          <div id="ana-send-msg" style="display:none;margin-bottom:12px" class="alerta info"><i class="ti ti-check"></i> Link da anamnese enviado por WhatsApp!</div>
+          <div id="ana-campos-list">
+            <!-- populado por JS -->
+          </div>
         </div>
+        <!-- Coluna direita -->
         <div class="col">
+          <!-- Status de envio -->
           <div class="card">
             <div class="card-title"><i class="ti ti-mail"></i> Status de envio</div>
+            <div style="margin-bottom:12px">
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">Enviar para</label>
+              <select id="ana-pac-envio" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:13px;font-family:var(--font);background:var(--warm);color:var(--text)">
+                <option value="">Selecione o paciente...</option>
+              </select>
+            </div>
+            <button class="btn btn-sage btn-full" style="font-size:13px;margin-bottom:14px" onclick="anaEnviarPaciente()">
+              <i class="ti ti-send"></i> Enviar formulário
+            </button>
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Histórico</div>
             <table class="ana-table">
               <thead><tr><th>Paciente</th><th>Enviado</th><th>Status</th></tr></thead>
-              <tbody>
+              <tbody id="ana-status-table">
                 <tr><td>Ana Silva</td><td>28 jun</td><td><span class="status-pill sp-ok"><i class="ti ti-check" style="font-size:11px"></i> Preenchido</span></td></tr>
                 <tr><td>Paula Mendes</td><td>01 jul</td><td><span class="status-pill sp-sent"><i class="ti ti-clock" style="font-size:11px"></i> Enviado</span></td></tr>
-                <tr><td>Thiago Braga</td><td>02 jul</td><td><span class="status-pill sp-pend"><i class="ti ti-clock" style="font-size:11px"></i> Pendente</span></td></tr>
+                <tr><td>Sofia Lima</td><td>02 jul</td><td><span class="status-pill sp-pend"><i class="ti ti-clock" style="font-size:11px"></i> Pendente</span></td></tr>
               </tbody>
             </table>
           </div>
+          <!-- Preview do formulário -->
           <div class="card">
             <div class="card-title"><i class="ti ti-eye"></i> Como o paciente vê</div>
             <div class="preview-shell">
-              <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px">Anamnese Inicial</div>
-              <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Mariane Galani · Psicóloga · Jundiaí, SP</div>
-              <div class="field"><label>Queixa principal</label><textarea rows="3" placeholder="Descreva o que te trouxe à terapia..."></textarea></div>
-              <div class="field"><label>Já fez acompanhamento antes?</label><select><option>Selecione...</option><option>Sim</option><option>Não</option></select></div>
+              <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px" id="ana-preview-titulo">Anamnese Inicial</div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:14px" id="ana-preview-sub">Mariane Galani · Psicóloga · Jundiaí, SP</div>
+              <div class="field"><label>Queixa principal / motivo de busca</label><textarea rows="3" placeholder="Descreva o que te trouxe à terapia..."></textarea></div>
+              <div class="field"><label>Já fez acompanhamento psicológico antes?</label><select><option>Selecione...</option><option>Sim</option><option>Não</option></select></div>
+              <div class="field"><label>Usa medicação psiquiátrica?</label><select><option>Selecione...</option><option>Sim</option><option>Não</option></select></div>
               <button class="btn btn-sage btn-full" style="font-size:13px">Enviar respostas</button>
             </div>
           </div>
@@ -471,63 +490,53 @@
       </div>
     </div>
 
-    <!-- ═══ CARTÕES DO PACIENTE ═══ -->
+        <!-- ═══ CARTÕES DO PACIENTE ═══ -->
     <div id="v-cartoes" class="view">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
         <div style="font-size:13px;color:var(--text2)">Envie tarefas terapêuticas entre sessões e acompanhe a adesão de cada paciente.</div>
-        <button class="btn btn-sage" onclick="openModal('modal-cartao')"><i class="ti ti-plus"></i> Novo cartão</button>
+        <div style="display:flex;gap:8px">
+          <select id="cart-filtro-pac" onchange="cartRender()" style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;font-family:var(--font);background:var(--warm);color:var(--text)">
+            <option value="">Todos os pacientes</option>
+          </select>
+          <button class="btn btn-sage" onclick="openModal('modal-cartao')"><i class="ti ti-plus"></i> Novo cartão</button>
+        </div>
       </div>
       <div class="cartao-layout">
+        <!-- Lista de cartões -->
         <div>
           <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Cartões ativos</div>
-          <div class="cartao-item active" onclick="selectCartao(this,80)">
-            <div class="ci-head"><div><div class="ci-title">Diário de humor + respiração</div><div class="ci-meta">Ana Silva · 19 jun · 5 tarefas</div></div><span class="tag-pago">Ativo</span></div>
-            <div class="ci-bar"><div class="ci-fill" style="width:80%"></div></div>
-            <div class="ci-adesao">Adesão: 80% · 4 de 5 concluídas</div>
-          </div>
-          <div class="cartao-item" onclick="selectCartao(this,100)">
-            <div class="ci-head"><div><div class="ci-title">Registro de pensamentos automáticos</div><div class="ci-meta">Ana Silva · 12 jun · 7 tarefas</div></div><span class="tag-conf">Concluído</span></div>
-            <div class="ci-bar"><div class="ci-fill" style="width:100%"></div></div>
-            <div class="ci-adesao">Adesão: 100% · 7 de 7</div>
-          </div>
-          <div class="cartao-item" onclick="selectCartao(this,33)">
-            <div class="ci-head"><div><div class="ci-title">Técnica de exposição gradual</div><div class="ci-meta">Rafael Costa · 30 jun · 3 tarefas</div></div><span class="tag-pago">Ativo</span></div>
-            <div class="ci-bar"><div class="ci-fill" style="width:33%"></div></div>
-            <div class="ci-adesao">Adesão: 33% · 1 de 3</div>
-          </div>
-          <div class="cartao-item" onclick="selectCartao(this,0)">
-            <div class="ci-head"><div><div class="ci-title">Autocompaixão — exercícios diários</div><div class="ci-meta">Carla Nunes · 01 jul · 4 tarefas</div></div><span class="tag-pend">Não iniciado</span></div>
-            <div class="ci-bar"><div class="ci-fill" style="width:0%"></div></div>
-            <div class="ci-adesao">Adesão: 0% · Aguardando</div>
+          <div id="cart-lista">
+            <!-- populado por JS -->
           </div>
         </div>
+        <!-- Detalhe do cartão -->
         <div id="cartao-detail" class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-            <div style="font-size:14px;font-weight:600;color:var(--text)">Diário de humor + respiração</div>
-            <span class="badge badge-luma">LUMA sugeriu</span>
+          <div id="cart-detalhe-vazio" style="text-align:center;padding:32px;color:var(--text3)">
+            <i class="ti ti-cards" style="font-size:32px;display:block;margin-bottom:8px"></i>
+            Selecione um cartão para ver os detalhes
           </div>
-          <div style="font-size:12px;color:var(--text3);margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">Ana Silva · 19 a 25 jun · 5 tarefas</div>
-          <div id="tarefa-list">
-            <div class="tarefa done" onclick="toggleTarefa(this)"><div class="tar-chk"><i class="ti ti-check"></i></div><div class="tar-info"><div class="tar-title">Registro diário de humor</div><div class="tar-desc">Anote como se sentiu ao acordar e ao dormir. Escala 1–10.</div></div></div>
-            <div class="tarefa done" onclick="toggleTarefa(this)"><div class="tar-chk"><i class="ti ti-check"></i></div><div class="tar-info"><div class="tar-title">Respiração 4-7-8 pela manhã</div><div class="tar-desc">Inspire 4s, segure 7s, expire 8s. Repita 3 vezes ao acordar.</div></div></div>
-            <div class="tarefa done" onclick="toggleTarefa(this)"><div class="tar-chk"><i class="ti ti-check"></i></div><div class="tar-info"><div class="tar-title">Identificar 1 pensamento automático</div><div class="tar-desc">Escreva o pensamento, a situação e a emoção que gerou.</div></div></div>
-            <div class="tarefa done" onclick="toggleTarefa(this)"><div class="tar-chk"><i class="ti ti-check"></i></div><div class="tar-info"><div class="tar-title">Leitura do material enviado</div><div class="tar-desc">Leia o capítulo sobre reestruturação cognitiva (5 pgs).</div></div></div>
-            <div class="tarefa" onclick="toggleTarefa(this)"><div class="tar-chk"></div><div class="tar-info"><div class="tar-title">Registro de conquistas da semana</div><div class="tar-desc">Liste 3 coisas positivas que aconteceram ou você fez bem.</div></div></div>
-          </div>
-          <div class="adesao-row">
-            <span style="font-size:12px;color:var(--text3)">Adesão geral</span>
-            <div class="ad-bar"><div class="ad-fill" id="adesao-fill" style="width:80%"></div></div>
-            <span style="font-size:13px;font-weight:700;color:var(--sage)" id="adesao-pct">80%</span>
-          </div>
-          <div class="row" style="gap:8px;margin-top:12px">
-            <button class="btn btn-sage" style="flex:1;justify-content:center;font-size:12px" onclick="abrirRenovar()"><i class="ti ti-refresh"></i> Renovar cartão</button>
-            <button class="btn btn-ghost" style="font-size:12px"><i class="ti ti-brand-whatsapp"></i> Enviar</button>
+          <div id="cart-detalhe-conteudo" style="display:none">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <div style="font-size:14px;font-weight:600;color:var(--text)" id="cart-d-titulo">—</div>
+              <span id="cart-d-badge" class="badge b-teal"></span>
+            </div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)" id="cart-d-meta">—</div>
+            <div id="tarefa-list"></div>
+            <div class="adesao-row" style="margin-top:12px">
+              <span style="font-size:12px;color:var(--text3)">Adesão geral</span>
+              <div class="ad-bar"><div class="ad-fill" id="adesao-fill" style="width:0%"></div></div>
+              <span style="font-size:13px;font-weight:700;color:var(--teal)" id="adesao-pct">0%</span>
+            </div>
+            <div class="row" style="gap:8px;margin-top:12px">
+              <button class="btn btn-sage" style="flex:1;justify-content:center;font-size:12px" onclick="abrirRenovar()"><i class="ti ti-refresh"></i> Renovar cartão</button>
+              <button class="btn btn-ghost" style="font-size:12px" id="cart-btn-wpp" onclick="cartEnviarWpp()"><i class="ti ti-brand-whatsapp"></i> Enviar</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ═══ ALERTAS ═══ -->
+        <!-- ═══ ALERTAS ═══ -->
     <div id="v-alertas" class="view">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
         <div style="font-size:13px;color:var(--text2)">Alertas calculados automaticamente com base nas sessões e vencimentos cadastrados.</div>
@@ -783,37 +792,61 @@
 
     <!-- ═══ USUÁRIOS ═══ -->
     <div id="v-usuarios" class="view">
-      <div style="background:#EAF4FB;border:1px solid #B0D4EC;border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
-        <div class="luma-mark">N</div>
-        <div style="font-size:13px;color:var(--luma)"><strong>Funcionalidade em desenvolvimento</strong> — Multiusuários permitirá adicionar outras psicólogas ou secretárias à clínica, com controle de acesso por perfil.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+        <div style="font-size:13px;color:var(--text2)">Gerencie quem tem acesso ao NexxoPsi e com qual perfil.</div>
+        <button class="btn btn-sage" onclick="usrAbrirNovo()"><i class="ti ti-user-plus"></i> Adicionar usuário</button>
       </div>
       <div class="g2">
+        <!-- Lista de usuários -->
         <div class="card">
           <div class="card-title"><i class="ti ti-users"></i> Usuários da conta</div>
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--warm);border-radius:8px;border:1px solid var(--border)">
-              <div style="width:38px;height:38px;border-radius:50%;background:var(--sage);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff">MG</div>
-              <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">Mariane Galani</div><div style="font-size:11px;color:var(--text3)">CRP 06/XXXXX · Proprietária · Admin</div></div>
-              <span class="badge badge-sage">Admin</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--warm);border-radius:8px;border:1px solid var(--border);opacity:0.5">
-              <div style="width:38px;height:38px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text3)"><i class="ti ti-plus"></i></div>
-              <div style="flex:1"><div style="font-size:13px;color:var(--text3)">Adicionar psicóloga ou secretária...</div><div style="font-size:11px;color:var(--text3)">Disponível em breve</div></div>
-            </div>
+          <div id="usr-lista" style="display:flex;flex-direction:column;gap:10px">
+            <!-- populado por JS -->
           </div>
         </div>
-        <div class="card">
-          <div class="card-title"><i class="ti ti-shield-check"></i> Perfis de acesso previstos</div>
+        <!-- Formulário novo usuário -->
+        <div class="card" id="usr-form-card" style="display:none">
+          <div class="card-title"><i class="ti ti-user-plus"></i> Novo usuário</div>
+          <div class="field"><label>Nome completo *</label><input id="usr-nome" placeholder="Ex: Ana Souza" /></div>
+          <div class="field"><label>E-mail *</label><input id="usr-email" type="email" placeholder="email@exemplo.com" /></div>
+          <div class="field"><label>Perfil de acesso *</label>
+            <select id="usr-perfil">
+              <option value="admin">Admin — Acesso total</option>
+              <option value="psicologa">Psicóloga colaboradora</option>
+              <option value="secretaria">Secretária</option>
+            </select>
+          </div>
+          <div class="field"><label>Senha temporária *</label>
+            <input id="usr-senha" type="password" placeholder="Mínimo 6 caracteres" />
+          </div>
+          <div id="usr-erro" style="display:none;color:var(--danger);font-size:12px;margin-bottom:8px"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-sage" style="flex:1;justify-content:center" onclick="usrSalvar()"><i class="ti ti-check"></i> Salvar</button>
+            <button class="btn btn-ghost" onclick="usrCancelar()">Cancelar</button>
+          </div>
+        </div>
+        <!-- Perfis de acesso -->
+        <div class="card" id="usr-perfis-card">
+          <div class="card-title"><i class="ti ti-shield-check"></i> Perfis de acesso</div>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <div style="padding:11px 13px;background:var(--warm);border-radius:8px;border:1px solid var(--border)"><div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">Proprietária / Admin</div><div style="font-size:11px;color:var(--text3)">Acesso total: finanças, prontuários, configurações, relatórios.</div></div>
-            <div style="padding:11px 13px;background:var(--warm);border-radius:8px;border:1px solid var(--border)"><div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">Psicóloga colaboradora</div><div style="font-size:11px;color:var(--text3)">Agenda própria, prontuários dos seus pacientes, sem acesso financeiro da clínica.</div></div>
-            <div style="padding:11px 13px;background:var(--warm);border-radius:8px;border:1px solid var(--border)"><div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">Secretária</div><div style="font-size:11px;color:var(--text3)">Agenda, agendamentos, anamneses. Sem acesso a prontuários clínicos.</div></div>
+            <div style="padding:11px 13px;background:var(--warm);border-radius:8px;border:1px solid var(--border)">
+              <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:var(--teal);display:inline-block"></span> Admin</div>
+              <div style="font-size:11px;color:var(--text3)">Acesso total: prontuários, finanças, relatórios, configurações, todos os pacientes.</div>
+            </div>
+            <div style="padding:11px 13px;background:var(--warm);border-radius:8px;border:1px solid var(--border)">
+              <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#7B68EE;display:inline-block"></span> Psicóloga colaboradora</div>
+              <div style="font-size:11px;color:var(--text3)">Agenda, prontuários dos seus pacientes, Smart Notes e cartões. Sem acesso ao financeiro da clínica.</div>
+            </div>
+            <div style="padding:11px 13px;background:var(--warm);border-radius:8px;border:1px solid var(--border)">
+              <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#E0A020;display:inline-block"></span> Secretária</div>
+              <div style="font-size:11px;color:var(--text3)">Agenda, agendamentos, anamneses. Sem acesso a prontuários clínicos nem financeiro.</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ═══ CONFIGURAÇÕES ═══ -->
+        <!-- ═══ CONFIGURAÇÕES ═══ -->
     <div id="v-config" class="view">
       <div class="inner-tabs" style="margin-bottom:20px;width:auto">
         <button class="it active" onclick="cfgTab(this,'cfg-perfil')"><i class="ti ti-user" style="font-size:14px;margin-right:4px"></i> Perfil</button>
@@ -1378,6 +1411,7 @@
   <script src="js/modals.js" defer></script>
   <script src="js/charts.js" defer></script>
   <script src="js/relatorios.js" defer></script>
+  <script src="js/usuarios.js" defer></script>
   <script src="js/render.js" defer></script>
   <script src="js/main.js" defer></script>
 </body>

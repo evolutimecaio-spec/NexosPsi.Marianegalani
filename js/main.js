@@ -144,4 +144,10 @@ document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.mbn-item[data-view]').forEach(function(el) {
     el.addEventListener('click', function() { NAV.go(el.dataset.view); });
   });
+
+  // Popular selects das views secundárias
+  if (typeof snPopularSelect === 'function') snPopularSelect();
+  if (typeof anaInit === 'function') anaInit();
+  if (typeof usrRender === 'function') usrRender();
+  if (typeof cartRender === 'function') cartRender();
 });
