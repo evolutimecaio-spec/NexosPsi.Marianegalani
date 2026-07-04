@@ -1,0 +1,21 @@
+/* ── FINANCEIRO ── */
+.pacote-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.pacote{padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+.pac-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.pac-pac{font-size:11px;color:var(--text3);margin-bottom:10px}
+.pac-bar-wrap{margin-bottom:6px}
+.pac-bar-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px}
+.pac-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.pac-fill{height:100%;border-radius:3px}
+.pac-fill.ok{background:linear-gradient(90deg,var(--teal-mid),var(--teal))}
+.pac-fill.warn{background:#E8A820}
+.pac-fill.crit{background:var(--danger)}
+.pac-valor{font-size:12px;font-weight:600;color:var(--text);margin-top:8px}
+.pac-alerta{font-size:11px;margin-top:4px;display:flex;align-items:center;gap:4px}
+.pac-alerta.warn{color:var(--warn)}
+.pac-alerta.crit{color:var(--danger)}
+.fin-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.dev-table{width:100%;border-collapse:collapse}
+.dev-table th{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;padding:0 0 8px;text-align:left;border-bottom:1px solid var(--border)}
+.dev-table td{padding:9px 0;font-size:13px;color:var(--text);border-bottom:1px solid var(--border)}
+.dev-table tr:last-child td{border:none}

@@ -1,0 +1,25 @@
+/* ── CARTÕES ── */
+.cartao-layout{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.cartao-item{padding:14px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;transition:all 0.12s;margin-bottom:8px}
+.cartao-item:last-child{margin-bottom:0}
+.cartao-item:hover{border-color:var(--teal-mid);box-shadow:var(--shadow-sm)}
+.cartao-item.active{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal-light)}
+.ci-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+.ci-title{font-size:13px;font-weight:600;color:var(--text)}
+.ci-meta{font-size:11px;color:var(--text3);margin-top:2px}
+.ci-bar{height:5px;background:var(--border);border-radius:3px;margin-top:9px;overflow:hidden}
+.ci-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--teal-mid),var(--teal))}
+.ci-adesao{font-size:11px;color:var(--text3);margin-top:5px}
+.tarefa{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;background:var(--warm);border-radius:8px;border:1px solid var(--border);margin-bottom:7px;cursor:pointer;transition:all 0.12s}
+.tarefa:last-child{margin-bottom:0}
+.tarefa:hover{border-color:var(--sage-mid)}
+.tarefa.done{opacity:0.7}
+.tar-chk{width:18px;height:18px;border-radius:4px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all 0.12s;margin-top:1px}
+.tarefa.done .tar-chk{background:var(--sage);border-color:var(--sage);color:#fff}
+.tar-info{}
+.tar-title{font-size:13px;font-weight:500;color:var(--text)}
+.tarefa.done .tar-title{text-decoration:line-through;color:var(--text3)}
+.tar-desc{font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4}
+.adesao-row{display:flex;align-items:center;gap:10px;padding-top:12px;margin-top:12px;border-top:1px solid var(--border)}
+.ad-bar{flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden}
+.ad-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--teal-mid),var(--teal));transition:width 0.4s cubic-bezier(0.4,0,0.2,1)}

@@ -1,0 +1,14 @@
+{
+  "name": "NexxoPsi",
+  "short_name": "NexxoPsi",
+  "description": "Gestão clínica inteligente para psicólogos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1E3654",
+  "theme_color": "#1E3654",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "assets/logo-icon.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/logo-full.png",  "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,0 +1,18 @@
+/* ── AGENDA ── */
+.agenda-layout{display:grid;grid-template-columns:1fr 288px;gap:18px}
+.week-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.week-label{font-size:14px;font-weight:600;color:var(--text);flex:1;text-align:center}
+.week-btn{background:var(--card);border:1px solid var(--border);border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:16px;transition:all 0.12s}
+.week-btn:hover{border-color:var(--sage-mid);color:var(--sage)}
+.cal-grid{display:grid;grid-template-columns:46px repeat(5,1fr);gap:1px;background:var(--border);border-radius:10px;overflow:hidden}
+.cal-head{background:var(--card);padding:8px 4px;text-align:center;font-size:10px;color:var(--text3);font-weight:600}
+.cal-head.today{background:var(--teal-light);color:var(--teal)}
+.cal-time{background:var(--warm);padding:0 8px 0 4px;display:flex;align-items:center;justify-content:flex-end;font-size:9px;color:var(--text3);min-height:48px}
+.cal-cell{background:var(--card);padding:3px;min-height:48px;cursor:pointer;transition:background 0.1s}
+.cal-cell:hover{background:#F8FBFA}
+.cal-appt{border-radius:5px;padding:4px 6px;font-size:10px;font-weight:600;line-height:1.3;cursor:pointer;margin-bottom:2px}
+.cal-appt.pres{background:var(--sage);color:#fff}
+.cal-appt.online{background:#2557A7;color:#fff}
+.cal-legend{display:flex;gap:16px;margin-top:10px;font-size:11px;color:var(--text3)}
+.cal-legend span{display:flex;align-items:center;gap:5px}
+.cal-dot{width:10px;height:10px;border-radius:3px;display:inline-block}
