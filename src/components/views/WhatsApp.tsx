@@ -1,89 +1,154 @@
 'use client'
-import { useEffect, useState } from 'react'
-import * as DB from '@/lib/db'
+import { useState } from 'react'
+import { useStore } from '@/lib/store'
 import type { Paciente } from '@/types'
-import { wppLembrete, wppBoasVindas, wppCobranca, wppCartao } from '@/lib/config'
+import { fmtMoeda } from '@/lib/db'
+import { CONFIG } from '@/lib/config'
 
 type Tipo = 'lembrete'|'boasvindas'|'cobranca'|'cartao'|'livre'
 
+function buildMsg(pac: Paciente, tipo: Tipo, agHoje: any[]): string {
+  const nome = pac.nome.split(' ')[0]
+  const agPac = agHoje.find((a:any) => a.paciente_id === pac.id)
+  const dataHoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})
+  const hora = agPac?.hora || '10:00'
+  const local = pac.modalidade === 'Online'
+    ? 'O link será enviado em breve.'
+    : `Local: ${CONFIG.psicologa.endereco}.`
+
+  switch(tipo) {
+    case 'lembrete':
+      return `Olá, ${nome}! 🌿\n\nPassando para lembrar da sua sessão *amanhã, ${dataHoje} às ${hora}* com ${CONFIG.psicologa.nome}.\n${local}\n\nPor favor confirme respondendo *SIM* ou *NÃO*.\n\nAté lá! 💚`
+    case 'boasvindas':
+      return `Olá, ${nome}! 🌸\n\nSeja bem-vinde! Sou a ${CONFIG.psicologa.nome}, psicóloga (CRP ${CONFIG.psicologa.crp}).\n\nSua primeira sessão está marcada para *${dataHoje} às ${hora}*. ${local}\n\nEm caso de cancelamento, avise com pelo menos 24h de antecedência.\n\nQualquer dúvida, estou por aqui! 💚`
+    case 'cobranca':
+      const valor = pac.devedor_total > 0 ? fmtMoeda(pac.devedor_total) : 'o valor em aberto'
+      return `Olá, ${nome}! 🌿\n\nPassando para lembrar sobre o pagamento de ${valor} referente às suas sessões.\n\nVocê pode quitar pelo PIX: *${CONFIG.financeiro.chavePix}*\n\nSe já pagou, desconsidere. Obrigada! 😊`
+    case 'cartao':
+      return `Oi, ${nome}! 🌿\n\nSuas atividades terapêuticas da semana estão prontas.\n\n1. Registro diário de humor\n2. Respiração 4-7-8 pela manhã\n3. Identificar 1 pensamento automático\n\nLembre-se: cada tarefa é um passo na sua jornada! 💚`
+    default:
+      return ''
+  }
+}
+
 export default function WhatsApp() {
-  const [pacs, setPacs]   = useState<Paciente[]>([])
-  const [sel, setSel]     = useState<Paciente|null>(null)
-  const [tipo, setTipo]   = useState<Tipo>('lembrete')
-  const [msg, setMsg]     = useState('')
-  const [hist, setHist]   = useState<{nome:string;tipo:string;data:string}[]>([])
+  const { pacientes, agHoje } = useStore()
+  const [sel, setSel]   = useState<Paciente|null>(null)
+  const [tipo, setTipo] = useState<Tipo>('lembrete')
+  const [msg, setMsg]   = useState('')
+  const [hist, setHist] = useState<{nome:string;tipo:string;hora:string}[]>([])
 
-  useEffect(()=>{ DB.getPacientes().then(setPacs) },[])
-
-  const buildMsg = (pac: Paciente|null, t: Tipo) => {
-    if (!pac) return ''
-    const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})
-    if (t==='lembrete')   return wppLembrete(pac.nome.split(' ')[0], hoje, '10:00', pac.modalidade)
-    if (t==='boasvindas') return wppBoasVindas(pac.nome.split(' ')[0], hoje, '10:00', pac.modalidade)
-    if (t==='cobranca')   return wppCobranca(pac.nome.split(' ')[0], Number(pac.devedor_total))
-    if (t==='cartao')     return wppCartao(pac.nome.split(' ')[0], ['Registro de humor', 'Respiração 4-7-8'])
-    return ''
+  const onPac = (id: string) => {
+    const p = pacientes.find(x=>x.id===id)||null
+    setSel(p)
+    if (p) setMsg(buildMsg(p, tipo, agHoje))
+    else setMsg('')
   }
 
-  const onPac = (nome: string) => {
-    const p = pacs.find(x=>x.nome===nome)||null
-    setSel(p); setMsg(buildMsg(p, tipo))
+  const onTipo = (t: Tipo) => {
+    setTipo(t)
+    if (sel) setMsg(buildMsg(sel, t, agHoje))
   }
-  const onTipo = (t: Tipo) => { setTipo(t); setMsg(buildMsg(sel, t)) }
 
   const enviar = () => {
-    if (!sel?.fone || !msg.trim()) return
+    if (!sel?.fone||!msg.trim()) return
     window.open(`https://wa.me/${sel.fone}?text=${encodeURIComponent(msg)}`, '_blank')
-    const novo = { nome: sel.nome, tipo, data: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) }
-    setHist(h=>[novo,...h.slice(0,19)])
+    setHist(h=>[{nome:sel.nome,tipo,hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})},...h.slice(0,19)])
   }
+
+  const TIPOS: [Tipo,string][] = [
+    ['lembrete','📅 Lembrete de sessão'],
+    ['boasvindas','🌸 Boas-vindas'],
+    ['cobranca','💰 Cobrança'],
+    ['cartao','🃏 Cartão terapêutico'],
+    ['livre','✏️ Mensagem livre'],
+  ]
 
   return (
     <div className="wpp-layout">
       <div className="col">
         <div className="card">
           <div className="card-title"><i className="ti ti-brand-whatsapp"/>Enviar mensagem</div>
-          <div className="field"><label>Paciente</label>
-            <select value={sel?.nome||''} onChange={e=>onPac(e.target.value)}>
+
+          <div className="field">
+            <label>Paciente</label>
+            <select value={sel?.id||''} onChange={e=>onPac(e.target.value)}>
               <option value="">Selecione o paciente...</option>
-              {pacs.map(p=><option key={p.id}>{p.nome}</option>)}
+              {pacientes.map(p=>(
+                <option key={p.id} value={p.id}>
+                  {p.nome}{agHoje.find((a:any)=>a.paciente_id===p.id)?' · Hoje':''}
+                </option>
+              ))}
             </select>
           </div>
-          <div className="field"><label>Tipo de mensagem</label>
+
+          <div className="field">
+            <label>Tipo de mensagem</label>
             <select value={tipo} onChange={e=>onTipo(e.target.value as Tipo)}>
-              <option value="lembrete">Lembrete de sessão</option>
-              <option value="boasvindas">Boas-vindas</option>
-              <option value="cobranca">Cobrança</option>
-              <option value="cartao">Cartão terapêutico</option>
-              <option value="livre">Mensagem livre</option>
+              {TIPOS.map(([v,l])=><option key={v} value={v}>{l}</option>)}
             </select>
           </div>
-          <div className="field"><label>Mensagem</label>
-            <textarea rows={8} value={msg} onChange={e=>setMsg(e.target.value)} placeholder="Selecione um paciente e tipo..."/>
-          </div>
-          {sel?.fone && (
-            <a href={`https://wa.me/${sel.fone}?text=${encodeURIComponent(msg)}`} target="_blank"
-              className="btn btn-sage btn-full" onClick={enviar} style={{justifyContent:'center'}}>
-              <i className="ti ti-send"/>Abrir no WhatsApp
-            </a>
+
+          {sel && (
+            <div style={{background:'var(--teal-light)',padding:'8px 12px',borderRadius:8,fontSize:12,color:'var(--teal)',marginBottom:12,display:'flex',gap:12}}>
+              <span><strong>{sel.nome}</strong></span>
+              <span>{sel.modalidade}</span>
+              {sel.devedor_total>0&&<span style={{color:'var(--danger)',fontWeight:600}}>Dev. {fmtMoeda(sel.devedor_total)}</span>}
+            </div>
           )}
-          {!sel?.fone && sel && <div style={{fontSize:12,color:'var(--warn)',marginTop:8}}><i className="ti ti-alert-circle"/> {sel.nome} não tem WhatsApp cadastrado.</div>}
+
+          <div className="field">
+            <label>Mensagem</label>
+            <textarea rows={8} value={msg} onChange={e=>setMsg(e.target.value)}
+              placeholder={sel?'':'Selecione um paciente para gerar a mensagem...'}
+              style={{resize:'vertical'}}/>
+          </div>
+
+          {sel?.fone ? (
+            <a href={`https://wa.me/${sel.fone}?text=${encodeURIComponent(msg)}`} target="_blank"
+              className="btn btn-primary btn-full" onClick={enviar}
+              style={{justifyContent:'center',textDecoration:'none'}}>
+              <i className="ti ti-brand-whatsapp"/>Abrir no WhatsApp
+            </a>
+          ) : sel ? (
+            <div style={{fontSize:12,color:'var(--warn)',padding:'8px 0'}}>
+              <i className="ti ti-alert-circle" style={{marginRight:6}}/>{sel.nome} não tem WhatsApp cadastrado.
+            </div>
+          ) : null}
         </div>
       </div>
+
       <div className="col">
         <div className="card">
           <div className="card-title"><i className="ti ti-eye"/>Preview</div>
           <div className="wpp-preview">
-            <div className="wpp-bubble">{msg||'A mensagem aparecerá aqui...'}</div>
+            {msg
+              ? <div className="wpp-bubble">{msg}</div>
+              : <div style={{padding:'20px',color:'#999',fontSize:13,fontStyle:'italic'}}>Selecione um paciente e tipo para ver o preview</div>
+            }
           </div>
         </div>
+
         <div className="card">
-          <div className="card-title"><i className="ti ti-history"/>Histórico</div>
-          {!hist.length ? <div style={{fontSize:12,color:'var(--text3)'}}>Nenhuma mensagem enviada ainda.</div>
-          : hist.map((h,i)=>(
-            <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'7px 0',borderBottom:'1px solid var(--border)',fontSize:12}}>
-              <span><strong>{h.nome}</strong> — {h.tipo}</span>
-              <span style={{color:'var(--text3)'}}>{h.data}</span>
+          <div className="card-title"><i className="ti ti-history"/>Histórico da sessão</div>
+          {!hist.length
+            ? <div style={{fontSize:12,color:'var(--text3)'}}>Nenhuma mensagem enviada nesta sessão.</div>
+            : hist.map((h,i)=>(
+                <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'7px 0',borderBottom:'1px solid var(--border)',fontSize:12}}>
+                  <div><strong>{h.nome}</strong> <span style={{color:'var(--text3)'}}>{h.tipo}</span></div>
+                  <span style={{color:'var(--text3)'}}>{h.hora}</span>
+                </div>
+              ))
+          }
+        </div>
+
+        <div className="card" style={{background:'var(--warm)'}}>
+          <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10}}>Templates disponíveis</div>
+          {TIPOS.map(([v,l])=>(
+            <div key={v} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 0',borderBottom:'1px solid var(--border)',cursor:'pointer'}}
+              onClick={()=>onTipo(v)}>
+              <span style={{fontSize:13}}>{l}</span>
+              {tipo===v&&<span className="badge b-teal" style={{marginLeft:'auto',fontSize:10}}>Ativo</span>}
             </div>
           ))}
         </div>

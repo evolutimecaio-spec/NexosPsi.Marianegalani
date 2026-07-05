@@ -1,13 +1,14 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { useStore } from '@/lib/store'
 import * as DB from '@/lib/db'
 import { Modal, useToast, Empty } from '@/components/ui'
-import type { Paciente, Cartao } from '@/types'
+import type { Cartao } from '@/types'
 import { fmtData } from '@/lib/db'
 import { CONFIG } from '@/lib/config'
 
 export default function Cartoes() {
-  const [pacs, setPacs] = useState<Paciente[]>([])
+  const { pacientes: pacs } = useStore()
   const [cartoes, setCartoes] = useState<Cartao[]>([])
   const [sel, setSel]   = useState<Cartao|null>(null)
   const [filtro, setFiltro] = useState('')
@@ -20,8 +21,8 @@ export default function Cartoes() {
   const toast = useToast()
 
   const load = useCallback(async () => {
-    const [p, c] = await Promise.all([DB.getPacientes(), DB.getCartoes()])
-    setPacs(p); setCartoes(c)
+    const c = await DB.getCartoes()
+    setCartoes(c)
   }, [])
 
   useEffect(()=>{ load() },[load])

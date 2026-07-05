@@ -386,3 +386,29 @@ table.rel tfoot td { font-weight: 700; color: var(--text); border-top: 2px solid
 .page-content { flex: 1 !important; padding: 24px !important; overflow-y: auto !important; }
 .topbar { display: flex !important; align-items: center !important; }
 .card { background: var(--card) !important; border: 1px solid var(--border) !important; border-radius: var(--radius) !important; padding: 18px 20px !important; }
+
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+/* ── Tabs (inner-tabs / itabs) ──────────────────────────── */
+.inner-tabs, .itabs { display:flex; gap:2px; border-bottom:2px solid var(--border); margin-bottom:16px; }
+.it { padding:8px 14px; font-size:12.5px; font-weight:600; color:var(--text3); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; display:flex; align-items:center; gap:6px; transition:all 0.12s; }
+.it:hover { color:var(--teal); }
+.it.active { color:var(--teal); border-bottom-color:var(--teal); }
+
+/* ── Config tabs ─────────────────────────────────────────── */
+.cfg-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
+.cfg-tab { padding:7px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--warm); color:var(--text2); transition:all 0.12s; display:flex; align-items:center; gap:6px; }
+.cfg-tab:hover { background:var(--teal-light); color:var(--teal); border-color:var(--teal-mid); }
+.cfg-tab.active { background:var(--teal); color:#fff; border-color:var(--teal); }
+
+/* ── Fatura row ──────────────────────────────────────────── */
+.fatura-row { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--warm); border-radius:8px; border:1px solid var(--border); margin-bottom:6px; }
+
+/* ── b-luma ─────────────────────────────────────────────── */
+.b-luma { background:rgba(91,71,204,0.12); color:var(--luma); }
+
+/* ── Ensure g3 grid ──────────────────────────────────────── */
+.g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+
+/* ── Shimmer ─────────────────────────────────────────────── */
+@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }

@@ -1,101 +1,137 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import * as DB from '@/lib/db'
 import { useToast } from '@/components/ui'
 import { CONFIG } from '@/lib/config'
 
 type Aba = 'perfil'|'sistema'|'financeiro'|'locais'
 
-export default function Config() {
-  const [aba, setAba] = useState<Aba>('perfil')
-  const [cfg, setCfg] = useState({ ...CONFIG })
-  const [saved, setSaved] = useState(false)
-  const toast = useToast()
-
-  const salvar = async () => {
-    await DB.saveConfig(cfg as any)
-    setSaved(true)
-    toast('Configurações salvas!')
-    setTimeout(()=>setSaved(false), 2000)
-  }
-
+function Field({ label, value, onChange, type='text' }: { label:string; value:string; onChange:(v:string)=>void; type?:string }) {
   return (
-    <div>
-      <div className="inner-tabs" style={{marginBottom:18}}>
-        {([['perfil','Perfil','ti-user'],['sistema','Sistema','ti-settings'],['financeiro','Financeiro','ti-coin'],['locais','Locais','ti-map-pin']] as [Aba,string,string][]).map(([id,label,icon])=>(
-          <div key={id} className={`it${aba===id?' active':''}`} onClick={()=>setAba(id)}>
-            <i className={icon} style={{marginRight:4}}/>{label}
-          </div>
-        ))}
-      </div>
-
-      {aba==='perfil' && (
-        <div className="card" style={{maxWidth:600}}>
-          <div className="card-title"><i className="ti ti-user"/>Dados da psicóloga</div>
-          {[['Nome completo','psicologa.nome'],['CRP','psicologa.crp'],['E-mail','psicologa.email'],['WhatsApp (só números)','psicologa.whatsapp'],['Endereço do consultório','psicologa.endereco'],['Cidade','psicologa.cidade']].map(([label, path])=>(
-            <div key={label} className="field">
-              <label>{label}</label>
-              <input value={getPath(cfg as any,path)} onChange={e=>setCfg(c=>setPath({...c},path,e.target.value) as any)}/>
-            </div>
-          ))}
-          <button className="btn btn-sage" onClick={salvar}>{saved?'Salvo ✓':'Salvar alterações'}</button>
-        </div>
-      )}
-
-      {aba==='sistema' && (
-        <div className="card" style={{maxWidth:600}}>
-          <div className="card-title"><i className="ti ti-lock"/>Segurança e sistema</div>
-          <div style={{background:'#FFF8E1',border:'1px solid #FFD740',borderRadius:8,padding:'12px 14px',marginBottom:16,fontSize:12,color:'#B7760A'}}>
-            <i className="ti ti-alert-triangle" style={{marginRight:6}}/>A senha é armazenada como hash SHA-256. Para alterar, gere um novo hash em <strong>emn178.github.io/online-tools/sha256.html</strong> e cole abaixo.
-          </div>
-          <div className="field"><label>Hash SHA-256 da senha</label><input type="text" defaultValue="" placeholder="Deixe em branco para manter a senha atual"/></div>
-          <div className="field"><label>Horas de sessão sem login</label><input type="number" defaultValue="8" min="1" max="24"/></div>
-          <div style={{marginTop:8,padding:'12px 14px',background:'var(--warm)',borderRadius:8,fontSize:12,color:'var(--text2)'}}>
-            <strong>Senha atual:</strong> mariane2025<br/>
-            <strong>Versão:</strong> 1.0.0 · Supabase conectado
-          </div>
-        </div>
-      )}
-
-      {aba==='financeiro' && (
-        <div className="card" style={{maxWidth:600}}>
-          <div className="card-title"><i className="ti ti-coin"/>Configurações financeiras</div>
-          <div className="field"><label>Valor padrão por sessão (R$)</label><input type="number" defaultValue={CONFIG.financeiro.valorSessaoPadrao}/></div>
-          <div className="field"><label>Meta mensal de faturamento (R$)</label><input type="number" defaultValue={CONFIG.financeiro.metaMensalFaturamento}/></div>
-          <div className="field"><label>Chave PIX</label><input defaultValue={CONFIG.financeiro.chavePix}/></div>
-          <button className="btn btn-sage" onClick={salvar}>{saved?'Salvo ✓':'Salvar alterações'}</button>
-        </div>
-      )}
-
-      {aba==='locais' && (
-        <div>
-          {[
-            { id:'unimed',     nome:'Unimed',            cor:'#1565C0', icon:'building-hospital',  end:'Unimed Jundiaí' },
-            { id:'aquarela',   nome:'Casa Aquarela',     cor:'#6A1B9A', icon:'home-heart',          end:'Casa Aquarela' },
-            { id:'anhangabau', nome:'Clínica Anhangabaú',cor:'#2E7D32', icon:'building-community', end:'Clínica do Anhangabaú' },
-          ].map(loc=>(
-            <div key={loc.id} className="card" style={{marginBottom:14,maxWidth:600,borderLeft:`4px solid ${loc.cor}`}}>
-              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
-                <div style={{width:36,height:36,borderRadius:8,background:loc.cor+'22',display:'flex',alignItems:'center',justifyContent:'center',color:loc.cor,fontSize:18}}>
-                  <i className={`ti ti-${loc.icon}`}/>
-                </div>
-                <div style={{fontSize:14,fontWeight:600,color:loc.cor}}>{loc.nome}</div>
-              </div>
-              <div className="field"><label>Endereço</label><input defaultValue={loc.end}/></div>
-              <div className="field"><label>Cor de identificação</label><input type="color" defaultValue={loc.cor} style={{width:60,height:36,padding:2,borderRadius:8,border:'1px solid var(--border)',cursor:'pointer'}}/></div>
-            </div>
-          ))}
-        </div>
-      )}
+    <div className="field">
+      <label>{label}</label>
+      <input type={type} value={value} onChange={e=>onChange(e.target.value)} />
     </div>
   )
 }
 
-// Helpers para paths aninhados
-function getPath(obj: any, path: string): string {
-  return path.split('.').reduce((o,k)=>o?.[k],obj) ?? ''
-}
-function setPath(obj: any, path: string, val: string): any {
-  const parts = path.split('.'); const last = parts.pop()!
-  let cur = obj; parts.forEach(p=>{ if(!cur[p]) cur[p]={}; cur=cur[p] }); cur[last]=val; return obj
+export default function Config() {
+  const [aba, setAba] = useState<Aba>('perfil')
+  const [nome, setNome]     = useState(CONFIG.psicologa.nome)
+  const [crp, setCrp]       = useState(CONFIG.psicologa.crp)
+  const [email, setEmail]   = useState(CONFIG.psicologa.email)
+  const [wpp, setWpp]       = useState(CONFIG.psicologa.whatsapp)
+  const [end, setEnd]       = useState(CONFIG.psicologa.endereco)
+  const [cidade, setCidade] = useState(CONFIG.psicologa.cidade)
+  const [meta, setMeta]     = useState(String(CONFIG.financeiro.metaMensalFaturamento))
+  const [pix, setPix]       = useState(CONFIG.financeiro.chavePix)
+  const [valorPad, setValorPad] = useState(String(CONFIG.financeiro.valorSessaoPadrao))
+  const [saved, setSaved]   = useState(false)
+  const toast = useToast()
+
+  const salvar = async () => {
+    await DB.saveConfig({ psicologa:{ nome,crp,email,whatsapp:wpp,endereco:end,cidade }, financeiro:{ metaMensalFaturamento:+meta,chavePix:pix,valorSessaoPadrao:+valorPad } })
+    setSaved(true); toast('Configurações salvas!')
+    setTimeout(()=>setSaved(false),2500)
+  }
+
+  const ABAS: [Aba,string,string][] = [
+    ['perfil','Perfil','ti-user'],
+    ['financeiro','Financeiro','ti-coin'],
+    ['locais','Locais','ti-map-pin'],
+    ['sistema','Sistema','ti-settings'],
+  ]
+
+  const LOCAIS = [
+    { id:'unimed',     nome:'Unimed',            cor:'#1565C0', icon:'ti-building-hospital',  end:'Unimed Jundiaí' },
+    { id:'aquarela',   nome:'Casa Aquarela',     cor:'#6A1B9A', icon:'ti-home-heart',          end:'Casa Aquarela' },
+    { id:'anhangabau', nome:'Clínica Anhangabaú',cor:'#2E7D32', icon:'ti-building-community', end:'Clínica do Anhangabaú' },
+  ]
+
+  return (
+    <div style={{maxWidth:680}}>
+      {/* Tabs */}
+      <div className="cfg-tabs">
+        {ABAS.map(([id,label,icon])=>(
+          <button key={id} className={`cfg-tab${aba===id?' active':''}`} onClick={()=>setAba(id)}>
+            <i className={`ti ${icon}`}/>{label}
+          </button>
+        ))}
+      </div>
+
+      {aba==='perfil' && (
+        <div className="card">
+          <div className="card-title"><i className="ti ti-user"/>Dados da psicóloga</div>
+          <div className="field-row">
+            <Field label="Nome completo" value={nome} onChange={setNome}/>
+            <Field label="CRP" value={crp} onChange={setCrp}/>
+          </div>
+          <div className="field-row">
+            <Field label="E-mail" value={email} onChange={setEmail} type="email"/>
+            <Field label="WhatsApp (só números)" value={wpp} onChange={setWpp}/>
+          </div>
+          <Field label="Endereço do consultório" value={end} onChange={setEnd}/>
+          <Field label="Cidade" value={cidade} onChange={setCidade}/>
+          <button className="btn btn-primary" onClick={salvar} style={{marginTop:4}}>
+            {saved ? '✓ Salvo!' : 'Salvar alterações'}
+          </button>
+        </div>
+      )}
+
+      {aba==='financeiro' && (
+        <div className="card">
+          <div className="card-title"><i className="ti ti-coin"/>Configurações financeiras</div>
+          <div className="field-row">
+            <Field label="Valor padrão por sessão (R$)" value={valorPad} onChange={setValorPad} type="number"/>
+            <Field label="Meta mensal de faturamento (R$)" value={meta} onChange={setMeta} type="number"/>
+          </div>
+          <Field label="Chave PIX (e-mail, CPF ou telefone)" value={pix} onChange={setPix}/>
+          <div style={{background:'var(--teal-light)',padding:'12px 14px',borderRadius:8,fontSize:12,color:'var(--teal)',marginBottom:12}}>
+            <i className="ti ti-info-circle" style={{marginRight:6}}/>
+            O valor padrão é usado como sugestão ao cadastrar novos pacientes. Cada paciente pode ter seu próprio valor.
+          </div>
+          <button className="btn btn-primary" onClick={salvar}>
+            {saved ? '✓ Salvo!' : 'Salvar alterações'}
+          </button>
+        </div>
+      )}
+
+      {aba==='locais' && (
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          {LOCAIS.map(loc=>(
+            <div key={loc.id} className="card" style={{borderLeft:`4px solid ${loc.cor}`}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+                <div style={{width:36,height:36,borderRadius:8,background:loc.cor+'18',display:'flex',alignItems:'center',justifyContent:'center',color:loc.cor,fontSize:18}}>
+                  <i className={`ti ${loc.icon}`}/>
+                </div>
+                <div style={{fontSize:15,fontWeight:700,color:loc.cor}}>{loc.nome}</div>
+              </div>
+              <Field label="Endereço" value={loc.end} onChange={()=>{}}/>
+            </div>
+          ))}
+          <div style={{fontSize:12,color:'var(--text3)',padding:'4px 0'}}>
+            Para alterar cores ou adicionar locais, edite <code>src/lib/db.ts</code> → objeto LOCAIS.
+          </div>
+        </div>
+      )}
+
+      {aba==='sistema' && (
+        <div className="card">
+          <div className="card-title"><i className="ti ti-lock"/>Segurança</div>
+          <div style={{background:'#FFF8E1',border:'1px solid #FFD740',borderRadius:8,padding:'12px 14px',marginBottom:16,fontSize:12,color:'#B7760A'}}>
+            <i className="ti ti-alert-triangle" style={{marginRight:6}}/>
+            A senha é protegida com SHA-256. Para alterar, gere o hash em{' '}
+            <a href="https://emn178.github.io/online-tools/sha256.html" target="_blank" style={{color:'#B7760A',fontWeight:700}}>emn178.github.io</a>{' '}
+            e edite o arquivo <code>src/hooks/useAuth.ts</code> → constante <code>HASH_CORRETO</code>.
+          </div>
+          <div style={{background:'var(--warm)',padding:'12px 14px',borderRadius:8,fontSize:12,color:'var(--text2)',lineHeight:1.7}}>
+            <strong>Senha atual:</strong> mariane2025<br/>
+            <strong>Sessão expira em:</strong> 8 horas<br/>
+            <strong>Versão:</strong> 1.0.0<br/>
+            <strong>Banco:</strong> Supabase · {process.env.NEXT_PUBLIC_SUPABASE_URL?.replace('https://','').split('.')[0] || '—'}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
