@@ -90,7 +90,7 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height={150}>
               <BarChart data={fatMeses} margin={{top:4,right:4,bottom:0,left:0}}>
                 <Bar dataKey="valor" fill="var(--teal)" radius={[4,4,0,0]} />
-                <Tooltip formatter={(v: number) => fmtMoeda(v)} labelFormatter={l=>l} />
+                <Tooltip formatter={(v) => fmtMoeda(Number(v))} labelFormatter={(l) => String(l)} />
               </BarChart>
             </ResponsiveContainer>
           ) : (

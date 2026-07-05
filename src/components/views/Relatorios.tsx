@@ -132,8 +132,8 @@ export default function Relatorios() {
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={chartData}>
                 <XAxis dataKey="mes" fontSize={11}/>
-                <YAxis tickFormatter={(v:number)=>`R$${v/1000}k`} fontSize={10}/>
-                <Tooltip formatter={(v:number)=>fmtMoeda(v)}/>
+                <YAxis tickFormatter={(v) => `R$${v/1000}k`} fontSize={10}/>
+                <Tooltip formatter={(v) => fmtMoeda(Number(v))}/>
                 <Legend/>
                 <Bar dataKey="faturado" name="Recebido" fill="var(--teal)" radius={[4,4,0,0]}/>
                 <Bar dataKey="pendente" name="Pendente" fill="rgba(198,40,40,0.6)" radius={[4,4,0,0]}/>
@@ -175,7 +175,7 @@ export default function Relatorios() {
           <div className="card-title"><i className="ti ti-map-pin"/>Por local</div>
           {localData.length > 0 && (
             <ResponsiveContainer width="100%" height={180}>
-              <PieChart><Pie data={localData} dataKey="value" cx="50%" cy="50%" outerRadius={70} label={({name,percent})=>`${name} ${(percent*100).toFixed(0)}%`} labelLine={false} fontSize={11}>
+              <PieChart><Pie data={localData} dataKey="value" cx="50%" cy="50%" outerRadius={70} label={({name,percent})=>`${name} ${((percent??0)*100).toFixed(0)}%`} labelLine={false} fontSize={11}>
                 {localData.map((l,i)=><Cell key={i} fill={l.cor}/>)}
               </Pie><Tooltip/></PieChart>
             </ResponsiveContainer>
