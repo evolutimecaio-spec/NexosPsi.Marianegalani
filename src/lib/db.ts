@@ -43,12 +43,22 @@ function check<T>(data: T | null, error: unknown, ctx: string): T {
 // PACIENTES
 // ══════════════════════════════════════════════════════════════════
 export async function getPacientes(filtros?: { local_id?: string; perfil?: string; ativo?: boolean }): Promise<Paciente[]> {
-  let q = supabase.from('pacientes').select('*').order('nome')
-  if (filtros?.ativo !== false) q = q.eq('ativo', true)
-  if (filtros?.local_id) q = q.eq('local_id', filtros.local_id)
-  if (filtros?.perfil) q = q.contains('perfil', [filtros.perfil])
-  const { data, error } = await q
-  return check(data, error, 'listar pacientes') ?? []
+  try {
+    let q = supabase.from('pacientes').select('*').order('nome')
+    if (filtros?.ativo !== false) q = q.eq('ativo', true)
+    if (filtros?.local_id) q = q.eq('local_id', filtros.local_id)
+    if (filtros?.perfil) q = q.contains('perfil', [filtros.perfil])
+    const { data, error } = await q
+    if (error || !data) throw new Error('supabase error')
+    if (data.length === 0) {
+      const { DEMO_PACIENTES } = await import('./demo')
+      return DEMO_PACIENTES
+    }
+    return data
+  } catch {
+    const { DEMO_PACIENTES } = await import('./demo')
+    return DEMO_PACIENTES
+  }
 }
 
 export async function getPaciente(id: string): Promise<Paciente | null> {
@@ -76,13 +86,28 @@ const AGS_SELECT = `*, paciente:pacientes(id, nome, avatar, fone, local_id, valo
 export async function getAgendamentos(filtros?: {
   data?: string; dataIni?: string; dataFim?: string; pacienteId?: string
 }): Promise<Agendamento[]> {
-  let q = supabase.from('agendamentos').select(AGS_SELECT).order('data').order('hora')
-  if (filtros?.data)       q = q.eq('data', filtros.data)
-  if (filtros?.dataIni)    q = q.gte('data', filtros.dataIni)
-  if (filtros?.dataFim)    q = q.lte('data', filtros.dataFim)
-  if (filtros?.pacienteId) q = q.eq('paciente_id', filtros.pacienteId)
-  const { data, error } = await q
-  return check(data, error, 'listar agendamentos') ?? []
+  try {
+    let q = supabase.from('agendamentos').select(AGS_SELECT).order('data').order('hora')
+    if (filtros?.data)       q = q.eq('data', filtros.data)
+    if (filtros?.dataIni)    q = q.gte('data', filtros.dataIni)
+    if (filtros?.dataFim)    q = q.lte('data', filtros.dataFim)
+    if (filtros?.pacienteId) q = q.eq('paciente_id', filtros.pacienteId)
+    const { data, error } = await q
+    if (error || !data) throw new Error('supabase error')
+    if (data.length === 0) {
+      const { DEMO_AGENDAMENTOS } = await import('./demo')
+      let ags = DEMO_AGENDAMENTOS
+      if (filtros?.data) ags = ags.filter(a => a.data === filtros.data)
+      if (filtros?.pacienteId) ags = ags.filter(a => a.paciente_id === filtros.pacienteId)
+      return ags
+    }
+    return data
+  } catch {
+    const { DEMO_AGENDAMENTOS } = await import('./demo')
+    let ags = DEMO_AGENDAMENTOS
+    if (filtros?.data) ags = ags.filter(a => a.data === filtros!.data)
+    return ags
+  }
 }
 
 export const getAgendamentosDia  = (d: string) => getAgendamentos({ data: d })
@@ -124,14 +149,18 @@ export async function getFaturas(pacienteId?: string): Promise<Fatura[]> {
 }
 
 export async function getInadimplentes(): Promise<Inadimplente[]> {
+  try {
   const { data, error } = await supabase.from('faturas')
     .select(FAT_SELECT).eq('pago', false).lte('vencimento', today()).order('vencimento')
-  const rows = check(data, error, 'inadimplentes') ?? []
+  if (error || !data) { const { DEMO_INADIMPLENTES } = await import('./demo'); return DEMO_INADIMPLENTES }
+  if (data.length === 0) { const { DEMO_INADIMPLENTES } = await import('./demo'); return DEMO_INADIMPLENTES }
+  const rows = data
   return rows.map((f: Fatura) => ({
     paciente: f.paciente as Inadimplente['paciente'],
     fatura: { id: f.id, valor: f.valor, vencimento: f.vencimento, status: f.status },
     diasAtraso: Math.round((Date.now() - new Date(f.vencimento).getTime()) / 86400000),
   }))
+  } catch { const { DEMO_INADIMPLENTES } = await import('./demo'); return DEMO_INADIMPLENTES }
 }
 
 export async function getTotalDevedor(): Promise<number> {

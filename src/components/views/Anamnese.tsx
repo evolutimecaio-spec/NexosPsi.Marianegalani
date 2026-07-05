@@ -78,13 +78,18 @@ export default function Anamnese() {
               <table className="ana-table">
                 <thead><tr><th>Paciente</th><th>Enviado</th><th>Status</th></tr></thead>
                 <tbody>
-                  {anas.slice(0,10).map(a=>{
-                    const pac = pacs.find(p=>p.id===a.paciente_id)
+                  {anas.length === 0 ? (
+                    <tr><td colSpan={3} style={{textAlign:'center',color:'var(--text3)',padding:'12px'}}>Nenhuma anamnese enviada ainda.</td></tr>
+                  ) : anas.slice(0,10).map(a => {
+                    const pac = pacs.find(p => p.id === a.paciente_id)
+                    const nomePac = pac?.nome || '?'
+                    const dataEnvio = a.enviado_em ? fmtData(a.enviado_em.slice(0,10)) : '—'
+                    const statusClass = a.status === 'preenchido' ? 'sp-ok' : a.status === 'enviado' ? 'sp-sent' : 'sp-pend'
                     return (
                       <tr key={a.id}>
-                        <td>{(a.paciente as any)?.nome||pac?.nome||'?'}</td>
-                        <td>{a.enviado_em?fmtData(a.enviado_em.slice(0,10)):'—'}</td>
-                        <td><span className={`status-pill ${a.status==='preenchido'?'sp-ok':a.status==='enviado'?'sp-sent':'sp-pend'}`}>{a.status}</span></td>
+                        <td>{nomePac}</td>
+                        <td>{dataEnvio}</td>
+                        <td><span className={`status-pill ${statusClass}`}>{a.status}</span></td>
                       </tr>
                     )
                   })}

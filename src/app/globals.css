@@ -114,6 +114,13 @@ a { text-decoration: none; color: inherit; }
 .btn-ghost:hover { background: var(--warm); color: var(--text); }
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-danger:hover { background: #a31f1f; }
+.btn-sage  { background: var(--teal); color: #fff; }
+.btn-sage:hover  { background: #1A6A88; }
+.btn-sage:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-secondary { background: var(--warm); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+
+.btn-danger:hover { background: #a31f1f; }
 .btn-luma { background: var(--luma); color: #fff; }
 .btn-luma:hover { background: #4839B3; }
 .btn-full { width: 100%; justify-content: center; }
@@ -362,3 +369,20 @@ table.rel tfoot td { font-weight: 700; color: var(--text); border-top: 2px solid
 @keyframes slideUp  { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes spin     { to { transform: rotate(360deg); } }
 @keyframes pulse    { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.status-pill { display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:12px; }
+.sp-ok   { background:#E8F5E9; color:var(--success); }
+.sp-sent { background:var(--teal-light); color:var(--teal); }
+.sp-pend { background:#FFF3E0; color:var(--warn); }
+
+.ana-table { width:100%; border-collapse:collapse; font-size:12px; }
+.ana-table th { padding:8px 10px; text-align:left; font-weight:700; color:var(--text3); border-bottom:1px solid var(--border); }
+.ana-table td { padding:8px 10px; border-bottom:1px solid var(--border); color:var(--text2); }
+
+/* Forçar layout crítico sobre reset do Tailwind */
+.app-shell { display: flex !important; min-height: 100vh !important; }
+.main-area { flex: 1 !important; display: flex !important; flex-direction: column !important; min-width: 0 !important; margin-left: var(--sb-width) !important; }
+.sidebar { display: flex !important; flex-direction: column !important; }
+.page-content { flex: 1 !important; padding: 24px !important; overflow-y: auto !important; }
+.topbar { display: flex !important; align-items: center !important; }
+.card { background: var(--card) !important; border: 1px solid var(--border) !important; border-radius: var(--radius) !important; padding: 18px 20px !important; }
