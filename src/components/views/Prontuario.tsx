@@ -133,9 +133,9 @@ function ProntuarioInner() {
         <select value={filtroPerfil} onChange={e=>setFiltroPerfil(e.target.value)}
           style={{border:'1px solid var(--border)',borderRadius:8,padding:'7px 10px',fontSize:13,fontFamily:'var(--font)',background:'var(--warm)',color:'var(--text)'}}>
           <option value="">Todos os perfis</option>
-          <optgroup label="👤 Adulto"><option value="adulto">Adulto</option><option value="adulto_emocional">Adulto · Emocional</option><option value="adulto_neuro">Adulto · Neurodivergente</option></optgroup>
-          <optgroup label="🧑 Adolescente"><option value="adolescente">Adolescente</option><option value="adolescente_emocional">Adolescente · Emocional</option><option value="adolescente_neuro">Adolescente · Neurodivergente</option></optgroup>
-          <optgroup label="🧒 Criança"><option value="crianca">Criança</option><option value="crianca_emocional">Criança · Emocional</option><option value="crianca_neuro">Criança · Neurodivergente</option></optgroup>
+          <optgroup label="👤 Adulto"><option value="adulto_emocional">Adulto · Emocional</option><option value="adulto_neuro">Adulto · Neurodivergente</option></optgroup>
+          <optgroup label="🧑 Adolescente"><option value="adolescente_emocional">Adolescente · Emocional</option><option value="adolescente_neuro">Adolescente · Neurodivergente</option></optgroup>
+          <optgroup label="🧒 Criança"><option value="crianca_emocional">Criança · Emocional</option><option value="crianca_neuro">Criança · Neurodivergente</option></optgroup>
           <optgroup label="🎓 Outros"><option value="supervisao">Supervisão</option></optgroup>
         </select>
         <button className="btn btn-primary" onClick={()=>setModalPac(true)}>
@@ -345,17 +345,14 @@ function ProntuarioInner() {
           <select value={formPac.perfil?.[0]||''} onChange={e=>setFormPac(p=>({...p,perfil:e.target.value?[e.target.value]:[]}))}>
             <option value="">Selecione...</option>
             <optgroup label="👤 Adulto">
-              <option value="adulto">Adulto</option>
               <option value="adulto_emocional">Adulto · Emocional</option>
               <option value="adulto_neuro">Adulto · Neurodivergente</option>
             </optgroup>
             <optgroup label="🧑 Adolescente">
-              <option value="adolescente">Adolescente</option>
               <option value="adolescente_emocional">Adolescente · Emocional</option>
               <option value="adolescente_neuro">Adolescente · Neurodivergente</option>
             </optgroup>
             <optgroup label="🧒 Criança">
-              <option value="crianca">Criança</option>
               <option value="crianca_emocional">Criança · Emocional</option>
               <option value="crianca_neuro">Criança · Neurodivergente</option>
             </optgroup>

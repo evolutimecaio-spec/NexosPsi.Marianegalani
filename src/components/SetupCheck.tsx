@@ -1,23 +1,23 @@
 'use client'
 import { useEffect } from 'react'
 
-// Chama /api/setup na primeira visita para criar tabelas automaticamente
-// Usa localStorage para não chamar mais de uma vez por browser
+// Executa o setup automático do banco na primeira visita
+// Usa /api/setup que tem a SUPABASE_SERVICE_ROLE_KEY no servidor
 export default function SetupCheck() {
   useEffect(() => {
-    const key = 'nexopsi_setup_v1'
-    if (typeof window === 'undefined') return
-    if (localStorage.getItem(key)) return
+    const STORAGE_KEY = 'nexopsi_db_ready_v2'
+    if (localStorage.getItem(STORAGE_KEY)) return
 
     fetch('/api/setup')
       .then(r => r.json())
       .then(d => {
         if (d.ok) {
-          localStorage.setItem(key, '1')
-          console.log('[NexxoPsi] Setup automático:', d.status)
+          localStorage.setItem(STORAGE_KEY, '1')
+          // Recarregar a página para buscar dados reais do banco recém-criado
+          window.location.reload()
         }
       })
-      .catch(() => {}) // silencioso — fallback para modo demo
+      .catch(() => {}) // silencioso se falhar
   }, [])
 
   return null

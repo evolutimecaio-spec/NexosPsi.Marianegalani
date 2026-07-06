@@ -45,13 +45,10 @@ export const PERFIS_CONFIG = [
 
 // Label legível para qualquer id de perfil
 const LABEL_MAP: Record<string, string> = {
-  adulto:               'Adulto',
   adulto_emocional:     'Adulto · Emocional',
   adulto_neuro:         'Adulto · Neurodivergente',
-  adolescente:          'Adolescente',
   adolescente_emocional:'Adolescente · Emocional',
   adolescente_neuro:    'Adolescente · Neurodivergente',
-  crianca:              'Criança',
   crianca_emocional:    'Criança · Emocional',
   crianca_neuro:        'Criança · Neurodivergente',
   supervisao:           'Supervisão',
