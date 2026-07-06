@@ -3,15 +3,18 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useStore } from '@/lib/store'
 import * as DB from '@/lib/db'
-import { Empty } from '@/components/ui'
+import { Empty, useToast } from '@/components/ui'
 import { fmtData, fmtMoeda } from '@/lib/db'
+import { gerarFaturasMes } from '@/lib/db'
 import { CONFIG } from '@/lib/config'
 
 export default function Financeiro() {
   const router = useRouter()
   const { inad, pronto, reload } = useStore()
+  const toast = useToast()
   const [filtroLocal, setFiltroLocal] = useState('')
   const [fatMes, setFatMes] = useState(0)
+  const [gerandoFatura, setGerandoFatura] = useState(false)
 
   useEffect(() => {
     if (!pronto) return
@@ -20,6 +23,17 @@ export default function Financeiro() {
 
   const filtrados = filtroLocal ? inad.filter(i=>i.paciente.local_id===filtroLocal) : inad
   const total = filtrados.reduce((s,i)=>s+Number(i.fatura.valor),0)
+
+  const gerarFaturas = async () => {
+    setGerandoFatura(true)
+    const mes = new Date().toISOString().slice(0,7)
+    try {
+      const { geradas, erros } = await gerarFaturasMes(mes)
+      toast(geradas > 0 ? `${geradas} faturas geradas!` : 'Nenhuma sessão realizada sem fatura ainda.')
+      if (geradas > 0) reload('financeiro')
+    } catch(e:any){ toast(e.message,'danger') }
+    finally { setGerandoFatura(false) }
+  }
 
   if (!pronto) return <div style={{padding:40,textAlign:'center',color:'var(--text3)'}}>Carregando...</div>
 
@@ -86,6 +100,7 @@ export default function Financeiro() {
           <div style={{display:'flex',flexDirection:'column',gap:8}}>
             <button className="btn btn-primary btn-full" onClick={()=>router.push('/relatorios')}><i className="ti ti-file-analytics"/>Gerar relatório</button>
             <button className="btn btn-ghost btn-full" onClick={()=>router.push('/alertas')}><i className="ti ti-bell-ringing"/>Ver alertas</button>
+            <button className="btn btn-primary btn-full" onClick={gerarFaturas} disabled={gerandoFatura}><i className="ti ti-file-invoice"/>{gerandoFatura?'Gerando...':'Gerar faturas do mês'}</button>
             <button className="btn btn-ghost btn-full" onClick={()=>router.push('/whatsapp')}><i className="ti ti-brand-whatsapp"/>Enviar cobranças</button>
           </div>
           <div style={{marginTop:20,fontSize:12,color:'var(--text2)',lineHeight:1.7}}>

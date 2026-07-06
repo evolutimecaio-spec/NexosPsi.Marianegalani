@@ -376,3 +376,42 @@ export async function seedSeNecessario(): Promise<void> {
     invalidate('ags:'); invalidate('faturas:'); invalidate('inadimplentes'); invalidate('dashboard')
   } catch (e) { console.warn('seed:', e) }
 }
+
+// ══════════════════════════════════════════════════════════════════
+// FATURA AUTOMÁTICA MENSAL
+// ══════════════════════════════════════════════════════════════════
+export async function gerarFaturasMes(mes: string): Promise<{ geradas: number; erros: number }> {
+  const pacs = await getPacientes()
+  const ini = `${mes}-01`
+  const fim = `${mes}-31`
+  let geradas = 0, erros = 0
+
+  await Promise.all(pacs.map(async (pac) => {
+    try {
+      // Ver sessões realizadas no mês
+      const ags = await getAgendamentos({ dataIni: ini, dataFim: fim, pacienteId: pac.id })
+      const realizadas = ags.filter(a => a.status === 'realizado' || a.status === 'confirmado')
+      if (realizadas.length === 0) return
+
+      // Verificar se já tem fatura para este mês/paciente
+      const fats = await getFaturas(pac.id)
+      const jaTemFatura = fats.some(f => f.mes === mes)
+      if (jaTemFatura) return
+
+      const vencimento = `${mes}-${String(pac.venc_dia || 10).padStart(2,'0')}`
+      const valor = realizadas.length * Number(pac.valor_sessao)
+
+      await addFatura(pac.id, { mes, valor, sessoes_count: realizadas.length, vencimento })
+
+      // Atualizar devedor_total do paciente
+      await updatePaciente(pac.id, {
+        devedor_total: Number(pac.devedor_total || 0) + valor
+      })
+
+      geradas++
+    } catch { erros++ }
+  }))
+
+  invalidate('faturas:'); invalidate('inadimplentes'); invalidate('dashboard'); invalidate('pacientes')
+  return { geradas, erros }
+}

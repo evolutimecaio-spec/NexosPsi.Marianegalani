@@ -11,17 +11,23 @@ const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov'
 const HORAS = ['08','09','10','11','12','13','14','15','16','17','18']
 const fmt = (d: Date) => d.toISOString().slice(0,10)
 
+function addWeeks(date: Date, weeks: number) {
+  const d = new Date(date); d.setDate(d.getDate() + weeks * 7); return d
+}
+
 export default function Agenda() {
-  const { pacientes } = useStore()
-  const [offset, setOffset]     = useState(0)
-  const [ags, setAgs]           = useState<Agendamento[]>([])
-  const [filtroLocal, setFiltro] = useState('')
-  const [loading, setLoading]   = useState(true)
-  const [modalAg, setModalAg]   = useState<Agendamento|null>(null)
+  const { pacientes, reload } = useStore()
+  const [offset, setOffset]       = useState(0)
+  const [ags, setAgs]             = useState<Agendamento[]>([])
+  const [filtroLocal, setFiltro]  = useState('')
+  const [loading, setLoading]     = useState(true)
+  const [modalAg, setModalAg]     = useState<Agendamento|null>(null)
   const [modalNova, setModalNova] = useState<{data:string;hora:string}|null>(null)
   const [formPacId, setFormPacId] = useState('')
   const [formTipo, setFormTipo]   = useState('Terapia Individual')
   const [formModal, setFormModal] = useState('Presencial')
+  const [recorrente, setRecorrente] = useState(false)
+  const [semanas, setSemanas]     = useState(12)
   const [saving, setSaving]       = useState(false)
   const toast = useToast()
 
@@ -31,10 +37,8 @@ export default function Agenda() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    try {
-      const a = await DB.getAgendamentosSemana(fmt(dom), fmt(sex))
-      setAgs(a)
-    } finally { setLoading(false) }
+    try { setAgs(await DB.getAgendamentosSemana(fmt(dom), fmt(sex))) }
+    finally { setLoading(false) }
   }, [offset])
 
   useEffect(() => { load() }, [load])
@@ -45,13 +49,27 @@ export default function Agenda() {
     if (!pac) { toast('Paciente não encontrado','danger'); return }
     setSaving(true)
     try {
-      await DB.addAgendamento({
-        paciente_id: pac.id, data: modalNova.data, hora: modalNova.hora,
-        tipo: formTipo, modalidade: formModal, local_id: pac.local_id, valor_sessao: pac.valor_sessao,
-      })
-      toast('Sessão agendada!')
-      setModalNova(null); setFormPacId('')
-      await load()
+      if (recorrente) {
+        // Criar todas as sessões recorrentes de uma vez
+        const base = new Date(modalNova.data + 'T00:00:00')
+        const promises = Array.from({ length: semanas }, (_, i) => {
+          const d = addWeeks(base, i)
+          return DB.addAgendamento({
+            paciente_id: pac.id, data: fmt(d), hora: modalNova.hora,
+            tipo: formTipo, modalidade: formModal, local_id: pac.local_id, valor_sessao: pac.valor_sessao,
+          })
+        })
+        await Promise.all(promises)
+        toast(`${semanas} sessões recorrentes agendadas!`)
+      } else {
+        await DB.addAgendamento({
+          paciente_id: pac.id, data: modalNova.data, hora: modalNova.hora,
+          tipo: formTipo, modalidade: formModal, local_id: pac.local_id, valor_sessao: pac.valor_sessao,
+        })
+        toast('Sessão agendada!')
+      }
+      setModalNova(null); setFormPacId(''); setRecorrente(false)
+      await load(); reload('agenda')
     } catch(e:any){ toast(e.message,'danger') }
     finally { setSaving(false) }
   }
@@ -77,13 +95,11 @@ export default function Agenda() {
           <option value="aquarela">🏡 Aquarela</option>
           <option value="ceped">🏢 CEPED</option>
         </select>
-        <button className="btn btn-primary btn-sm"
-          onClick={()=>setModalNova({data:fmt(hoje),hora:'10:00'})}>
+        <button className="btn btn-primary btn-sm" onClick={()=>setModalNova({data:fmt(hoje),hora:'10:00'})}>
           <i className="ti ti-plus"/>Novo agendamento
         </button>
       </div>
 
-      {/* Grade */}
       <div className="cal-wrap">
         <div className="cal-header">
           <div className="cal-corner"/>
@@ -109,8 +125,8 @@ export default function Agenda() {
                   const dia=new Date(dom); dia.setDate(dom.getDate()+di)
                   const dataStr=fmt(dia)
                   const cells=ags.filter(a=>{
-                    if (a.data!==dataStr||a.hora.slice(0,2)!==h) return false
-                    if (filtroLocal&&(a.local_id||(a.paciente as any)?.local_id)!==filtroLocal) return false
+                    if(a.data!==dataStr||a.hora.slice(0,2)!==h) return false
+                    if(filtroLocal&&(a.local_id||(a.paciente as any)?.local_id)!==filtroLocal) return false
                     return true
                   })
                   return (
@@ -138,41 +154,58 @@ export default function Agenda() {
       </div>
 
       {/* Modal: nova sessão */}
-      <Modal open={!!modalNova} onClose={()=>{setModalNova(null);setFormPacId('')}}
+      <Modal open={!!modalNova} onClose={()=>{setModalNova(null);setFormPacId('');setRecorrente(false)}}
         title="Novo agendamento" icon="calendar-plus">
         <div className="field">
           <label>Paciente *</label>
           <select value={formPacId} onChange={e=>setFormPacId(e.target.value)}>
             <option value="">Selecione o paciente...</option>
-            {pacientes.map(p=>(
-              <option key={p.id} value={p.id}>{p.nome}</option>
-            ))}
+            {pacientes.map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}
           </select>
         </div>
         <div className="field-row">
-          <div className="field">
-            <label>Data</label>
+          <div className="field"><label>Data</label>
             <input type="date" value={modalNova?.data||''} onChange={e=>setModalNova(n=>n?{...n,data:e.target.value}:n)}/>
           </div>
-          <div className="field">
-            <label>Horário</label>
+          <div className="field"><label>Horário</label>
             <input type="time" value={modalNova?.hora||''} onChange={e=>setModalNova(n=>n?{...n,hora:e.target.value}:n)}/>
           </div>
         </div>
         <div className="field-row">
-          <div className="field">
-            <label>Tipo</label>
+          <div className="field"><label>Tipo</label>
             <select value={formTipo} onChange={e=>setFormTipo(e.target.value)}>
               {['Terapia Individual','Terapia de Casal','Terapia Infantil','Avaliação Psicológica','Atendimento Neurodivergente','Supervisão Clínica','Orientação Parental'].map(t=><option key={t}>{t}</option>)}
             </select>
           </div>
-          <div className="field">
-            <label>Modalidade</label>
+          <div className="field"><label>Modalidade</label>
             <select value={formModal} onChange={e=>setFormModal(e.target.value)}>
               <option>Presencial</option><option>Online</option>
             </select>
           </div>
         </div>
+
+        {/* Recorrência */}
+        <div style={{background:'var(--warm)',border:'1px solid var(--border)',borderRadius:8,padding:12,marginBottom:12}}>
+          <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',marginBottom:recorrente?10:0}}>
+            <input type="checkbox" checked={recorrente} onChange={e=>setRecorrente(e.target.checked)}
+              style={{width:15,height:15,accentColor:'var(--teal)'}}/>
+            <span style={{fontSize:13,fontWeight:500}}>Agendamento recorrente (semanal)</span>
+          </label>
+          {recorrente && (
+            <div>
+              <label style={{fontSize:12,color:'var(--text3)',display:'block',marginBottom:4}}>Repetir por quantas semanas?</label>
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <input type="range" min={2} max={52} value={semanas} onChange={e=>setSemanas(+e.target.value)}
+                  style={{flex:1,accentColor:'var(--teal)'}}/>
+                <span style={{fontSize:14,fontWeight:700,color:'var(--teal)',minWidth:60}}>{semanas} sem.</span>
+              </div>
+              <div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>
+                Criará {semanas} sessões toda semana neste dia/horário
+              </div>
+            </div>
+          )}
+        </div>
+
         {formPacId && (
           <div style={{background:'var(--teal-light)',padding:'8px 12px',borderRadius:8,fontSize:12,color:'var(--teal)',marginBottom:12}}>
             <i className="ti ti-info-circle" style={{marginRight:6}}/>
@@ -180,7 +213,7 @@ export default function Agenda() {
           </div>
         )}
         <button className="btn btn-primary btn-full" onClick={salvar} disabled={saving||!formPacId}>
-          {saving?'Salvando...':'Agendar sessão'}
+          {saving?'Salvando...':(recorrente?`Agendar ${semanas} sessões recorrentes`:'Agendar sessão')}
         </button>
       </Modal>
 

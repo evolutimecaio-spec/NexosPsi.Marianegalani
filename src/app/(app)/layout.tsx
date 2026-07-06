@@ -19,6 +19,8 @@ const TITLES: Record<string, string> = {
   '/financeiro': 'Financeiro',
   '/relatorios': 'Relatórios',
   '/whatsapp':   'WhatsApp',
+  '/progresso':  'Progresso Terapêutico',
+  '/documentos': 'Documentos Clínicos',
   '/usuarios':   'Usuários',
   '/config':     'Configurações',
 }
