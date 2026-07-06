@@ -111,7 +111,7 @@ export default function Relatorios() {
             <option value="">Todos os locais</option>
             <option value="unimed">🏥 Unimed</option>
             <option value="aquarela">🏡 Aquarela</option>
-            <option value="anhangabau">🏢 Anhangabaú</option>
+            <option value="ceped">🏢 CEPED</option>
           </select>
         </div>
       </div>

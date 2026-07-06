@@ -5,12 +5,9 @@ import { fmtData, fmtMoeda } from '@/lib/db'
 import { CONFIG } from '@/lib/config'
 import { Empty } from '@/components/ui'
 
-export default function Alertas({ initialInad }: { initialInad?: any[] }) {
+export default function Alertas() {
   const router = useRouter()
-  const store = useStore()
-  const inad   = store.pronto ? store.inad : (initialInad ?? store.inad)
-  const pronto = !!initialInad || store.pronto
-  const { reload } = store
+  const { inad, pronto, reload } = useStore()
 
   if (!pronto) return <div style={{padding:40,textAlign:'center',color:'var(--text3)'}}>Carregando...</div>
 

@@ -6,6 +6,7 @@ import * as DB from '@/lib/db'
 import { Modal, useToast, Empty } from '@/components/ui'
 import type { Paciente, Evolucao, Fatura, Cartao, Documento } from '@/types'
 import { getLocal, fmtData, fmtMoeda, calcIdade } from '@/lib/db'
+import { perfilLabel } from '@/lib/config-clinica'
 
 type Aba = 'ev'|'fin'|'cart'|'docs'
 
@@ -13,14 +14,11 @@ function Skel({ h = 20 }: { h?: number }) {
   return <div style={{ height: h, borderRadius: 6, background: 'linear-gradient(90deg,var(--border) 25%,var(--warm) 50%,var(--border) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.2s infinite', marginBottom: 8 }} />
 }
 
-function ProntuarioInner({ initialPacientes }: { initialPacientes?: any[] }) {
+function ProntuarioInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const idParam = searchParams.get('id')
-  const store = useStore()
-  const pacientes = store.pronto ? store.pacientes : (initialPacientes ?? store.pacientes)
-  const pronto    = !!initialPacientes || store.pronto
-  const { reload } = store
+  const { pacientes, pronto, reload } = useStore()
 
   const [sel,  setSel]    = useState<Paciente|null>(null)
   const [aba,  setAba]    = useState<Aba>('ev')
@@ -35,7 +33,7 @@ function ProntuarioInner({ initialPacientes }: { initialPacientes?: any[] }) {
   const [formEv, setFormEv]   = useState('')
   const [modeloEv, setModeloEv] = useState('')
   const [modalPac, setModalPac] = useState(false)
-  const [formPac, setFormPac] = useState({ nome:'',fone:'',email:'',nascimento:'',sexo:'',cid:'',modalidade:'Presencial',local_id:'unimed',valor_sessao:'180',venc_dia:'10',obs:'' })
+  const [formPac, setFormPac] = useState({ nome:'',fone:'',email:'',nascimento:'',sexo:'',cid:'',modalidade:'Presencial',local_id:'unimed',valor_sessao:'180',venc_dia:'10',obs:'',perfil:[] as string[] })
   const [saving, setSaving]   = useState(false)
   const [loadingAba, setLoadingAba] = useState(false)
   const toast = useToast()
@@ -105,7 +103,7 @@ function ProntuarioInner({ initialPacientes }: { initialPacientes?: any[] }) {
     if (!formPac.nome || !formPac.fone) { toast('Nome e telefone obrigatórios','danger'); return }
     setSaving(true)
     try {
-      await DB.addPaciente({ ...formPac, valor_sessao: +formPac.valor_sessao, venc_dia: +formPac.venc_dia, ativo:true, sessoes_total:0, devedor_total:0 } as any)
+      await DB.addPaciente({ ...formPac, perfil: formPac.perfil.length ? formPac.perfil : ['adulto'], valor_sessao: +formPac.valor_sessao, venc_dia: +formPac.venc_dia, ativo:true, sessoes_total:0, devedor_total:0 } as any)
       toast('Paciente cadastrado!')
       setModalPac(false)
       await reload('pacientes')
@@ -130,16 +128,15 @@ function ProntuarioInner({ initialPacientes }: { initialPacientes?: any[] }) {
           <option value="">Todos os locais</option>
           <option value="unimed">🏥 Unimed</option>
           <option value="aquarela">🏡 Aquarela</option>
-          <option value="anhangabau">🏢 Anhangabaú</option>
+          <option value="ceped">🏢 CEPED</option>
         </select>
         <select value={filtroPerfil} onChange={e=>setFiltroPerfil(e.target.value)}
           style={{border:'1px solid var(--border)',borderRadius:8,padding:'7px 10px',fontSize:13,fontFamily:'var(--font)',background:'var(--warm)',color:'var(--text)'}}>
           <option value="">Todos os perfis</option>
-          <option value="adulto">Adulto</option>
-          <option value="crianca">Criança</option>
-          <option value="neurodiverge">Neurodivergente</option>
-          <option value="mulher">Mulher</option>
-          <option value="supervisao">Supervisão</option>
+          <optgroup label="👤 Adulto"><option value="adulto">Adulto</option><option value="adulto_emocional">Adulto · Emocional</option><option value="adulto_neuro">Adulto · Neurodivergente</option></optgroup>
+          <optgroup label="🧑 Adolescente"><option value="adolescente">Adolescente</option><option value="adolescente_emocional">Adolescente · Emocional</option><option value="adolescente_neuro">Adolescente · Neurodivergente</option></optgroup>
+          <optgroup label="🧒 Criança"><option value="crianca">Criança</option><option value="crianca_emocional">Criança · Emocional</option><option value="crianca_neuro">Criança · Neurodivergente</option></optgroup>
+          <optgroup label="🎓 Outros"><option value="supervisao">Supervisão</option></optgroup>
         </select>
         <button className="btn btn-primary" onClick={()=>setModalPac(true)}>
           <i className="ti ti-user-plus"/>Novo paciente
@@ -187,7 +184,7 @@ function ProntuarioInner({ initialPacientes }: { initialPacientes?: any[] }) {
                     <div style={{fontSize:17,fontWeight:700,color:'var(--text)',marginBottom:2}}>{sel.nome}</div>
                     <div style={{fontSize:12,color:'var(--text3)'}}>{sel.modalidade} · CID {sel.cid||'—'} · {sel.sessoes_total} sessões</div>
                     <div style={{display:'flex',gap:6,marginTop:6,flexWrap:'wrap'}}>
-                      {sel.perfil.map(pf=><span key={pf} className="badge b-teal" style={{fontSize:10}}>{pf}</span>)}
+                      {sel.perfil.map(pf=><span key={pf} className="badge b-teal" style={{fontSize:10}}>{perfilLabel(pf)}</span>)}
                       {getLocal(sel.local_id) && <span className="badge" style={{background:getLocal(sel.local_id)!.cor+'22',color:getLocal(sel.local_id)!.cor,fontSize:10}}>{getLocal(sel.local_id)!.nome}</span>}
                     </div>
                   </div>
@@ -343,8 +340,32 @@ function ProntuarioInner({ initialPacientes }: { initialPacientes?: any[] }) {
           <div className="field"><label>CID</label><input value={formPac.cid} onChange={e=>setFormPac(p=>({...p,cid:e.target.value}))}/></div>
           <div className="field"><label>Modalidade</label><select value={formPac.modalidade} onChange={e=>setFormPac(p=>({...p,modalidade:e.target.value}))}><option>Presencial</option><option>Online</option></select></div>
         </div>
+        <div className="field">
+          <label>Perfil clínico</label>
+          <select value={formPac.perfil?.[0]||''} onChange={e=>setFormPac(p=>({...p,perfil:e.target.value?[e.target.value]:[]}))}>
+            <option value="">Selecione...</option>
+            <optgroup label="👤 Adulto">
+              <option value="adulto">Adulto</option>
+              <option value="adulto_emocional">Adulto · Emocional</option>
+              <option value="adulto_neuro">Adulto · Neurodivergente</option>
+            </optgroup>
+            <optgroup label="🧑 Adolescente">
+              <option value="adolescente">Adolescente</option>
+              <option value="adolescente_emocional">Adolescente · Emocional</option>
+              <option value="adolescente_neuro">Adolescente · Neurodivergente</option>
+            </optgroup>
+            <optgroup label="🧒 Criança">
+              <option value="crianca">Criança</option>
+              <option value="crianca_emocional">Criança · Emocional</option>
+              <option value="crianca_neuro">Criança · Neurodivergente</option>
+            </optgroup>
+            <optgroup label="🎓 Outros">
+              <option value="supervisao">Supervisão</option>
+            </optgroup>
+          </select>
+        </div>
         <div className="field-row">
-          <div className="field"><label>Local</label><select value={formPac.local_id} onChange={e=>setFormPac(p=>({...p,local_id:e.target.value}))}><option value="unimed">🏥 Unimed</option><option value="aquarela">🏡 Aquarela</option><option value="anhangabau">🏢 Anhangabaú</option></select></div>
+          <div className="field"><label>Local</label><select value={formPac.local_id} onChange={e=>setFormPac(p=>({...p,local_id:e.target.value}))}><option value="unimed">🏥 Unimed</option><option value="aquarela">🏡 Aquarela</option><option value="ceped">🏢 CEPED</option></select></div>
           <div className="field"><label>Valor/sessão (R$)</label><input type="number" value={formPac.valor_sessao} onChange={e=>setFormPac(p=>({...p,valor_sessao:e.target.value}))}/></div>
         </div>
         <div className="field"><label>Observações</label><textarea value={formPac.obs} onChange={e=>setFormPac(p=>({...p,obs:e.target.value}))} rows={2}/></div>
@@ -354,10 +375,10 @@ function ProntuarioInner({ initialPacientes }: { initialPacientes?: any[] }) {
   )
 }
 
-export default function Prontuario({ initialPacientes }: { initialPacientes?: any[] }) {
+export default function Prontuario() {
   return (
     <Suspense fallback={<div style={{padding:40,color:'var(--text3)'}}>Carregando...</div>}>
-      <ProntuarioInner initialPacientes={initialPacientes} />
+      <ProntuarioInner />
     </Suspense>
   )
 }

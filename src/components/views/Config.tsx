@@ -45,7 +45,7 @@ export default function Config() {
   const LOCAIS = [
     { id:'unimed',     nome:'Unimed',            cor:'#1565C0', icon:'ti-building-hospital',  end:'Unimed Jundiaí' },
     { id:'aquarela',   nome:'Casa Aquarela',     cor:'#6A1B9A', icon:'ti-home-heart',          end:'Casa Aquarela' },
-    { id:'anhangabau', nome:'Clínica Anhangabaú',cor:'#2E7D32', icon:'ti-building-community', end:'Clínica do Anhangabaú' },
+    { id:'ceped', nome:'Clínica CEPED',cor:'#2E7D32', icon:'ti-building-community', end:'Clínica do CEPED' },
   ]
 
   return (

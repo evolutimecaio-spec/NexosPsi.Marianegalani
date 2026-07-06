@@ -7,29 +7,14 @@ import * as DB from '@/lib/db'
 import { fmtMoeda, calcIdade, getLocal } from '@/lib/db'
 import { CONFIG } from '@/lib/config'
 import { Empty } from '@/components/ui'
-import type { MetricasDashboard, Inadimplente, Agendamento } from '@/types'
 
 function Skel({ h = 20, w = '100%' }: { h?: number; w?: string }) {
   return <div style={{ height: h, width: w, borderRadius: 6, background: 'linear-gradient(90deg,var(--border) 25%,var(--warm) 50%,var(--border) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.2s infinite' }} />
 }
 
-interface Props {
-  initial?: {
-    metrics: MetricasDashboard
-    inad: Inadimplente[]
-    agHoje: Agendamento[]
-    pacientes: any[]
-  }
-}
-
-export default function Dashboard({ initial }: Props) {
+export default function Dashboard() {
   const router = useRouter()
-  const store = useStore()
-
-  // Usar dados do servidor imediatamente, atualizar do store quando pronto
-  const metrics = store.pronto ? store.metrics : (initial?.metrics ?? null)
-  const inad    = store.pronto ? store.inad    : (initial?.inad ?? [])
-  const pronto  = !!initial || store.pronto
+  const { metrics, inad, pronto } = useStore()
 
   const [bdays, setBdays]     = useState<any[]>([])
   const [fatMeses, setFatMeses] = useState<{ mes: string; valor: number }[]>([])

@@ -7,12 +7,9 @@ import { Empty } from '@/components/ui'
 import { fmtData, fmtMoeda } from '@/lib/db'
 import { CONFIG } from '@/lib/config'
 
-export default function Financeiro({ initialInad }: { initialInad?: any[] }) {
+export default function Financeiro() {
   const router = useRouter()
-  const store = useStore()
-  const inad   = store.pronto ? store.inad : (initialInad ?? store.inad)
-  const pronto = !!initialInad || store.pronto
-  const { reload } = store
+  const { inad, pronto, reload } = useStore()
   const [filtroLocal, setFiltroLocal] = useState('')
   const [fatMes, setFatMes] = useState(0)
 
@@ -36,7 +33,7 @@ export default function Financeiro({ initialInad }: { initialInad?: any[] }) {
             <option value="">Todos os locais</option>
             <option value="unimed">🏥 Unimed</option>
             <option value="aquarela">🏡 Aquarela</option>
-            <option value="anhangabau">🏢 Anhangabaú</option>
+            <option value="ceped">🏢 CEPED</option>
           </select>
           <button className="btn btn-ghost btn-sm" onClick={()=>reload('financeiro')}><i className="ti ti-refresh"/></button>
         </div>

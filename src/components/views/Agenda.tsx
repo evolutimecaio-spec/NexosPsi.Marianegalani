@@ -11,9 +11,8 @@ const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov'
 const HORAS = ['08','09','10','11','12','13','14','15','16','17','18']
 const fmt = (d: Date) => d.toISOString().slice(0,10)
 
-export default function Agenda({ initialPacientes, initialAgs }: { initialPacientes?: any[]; initialAgs?: any[] }) {
-  const store = useStore()
-  const pacientes = store.pronto ? store.pacientes : (initialPacientes ?? store.pacientes)
+export default function Agenda() {
+  const { pacientes } = useStore()
   const [offset, setOffset]     = useState(0)
   const [ags, setAgs]           = useState<Agendamento[]>([])
   const [filtroLocal, setFiltro] = useState('')
@@ -76,7 +75,7 @@ export default function Agenda({ initialPacientes, initialAgs }: { initialPacien
           <option value="">Todos os locais</option>
           <option value="unimed">🏥 Unimed</option>
           <option value="aquarela">🏡 Aquarela</option>
-          <option value="anhangabau">🏢 Anhangabaú</option>
+          <option value="ceped">🏢 CEPED</option>
         </select>
         <button className="btn btn-primary btn-sm"
           onClick={()=>setModalNova({data:fmt(hoje),hora:'10:00'})}>

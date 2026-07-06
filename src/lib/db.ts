@@ -22,7 +22,7 @@ const ERRO_BANCO = 'Banco não configurado. Execute o SETUP.sql no Supabase para
 export const LOCAIS: Record<string, Local> = {
   unimed:     { id: 'unimed',     nome: 'Unimed',            cor: '#1565C0', icon: 'building-hospital',  endereco: 'Unimed Jundiaí' },
   aquarela:   { id: 'aquarela',   nome: 'Casa Aquarela',     cor: '#6A1B9A', icon: 'home-heart',          endereco: 'Casa Aquarela' },
-  anhangabau: { id: 'anhangabau', nome: 'Clínica Anhangabaú',cor: '#2E7D32', icon: 'building-community', endereco: 'Clínica do Anhangabaú' },
+  ceped:      { id: 'ceped',      nome: 'CEPED',              cor: '#2E7D32', icon: 'building-community', endereco: 'CEPED Jundiaí' },
 }
 export const getLocal = (id?: string | null): Local | null => LOCAIS[id ?? ''] ?? null
 export const getLocais = (): Local[] => Object.values(LOCAIS)

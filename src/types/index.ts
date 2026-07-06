@@ -1,7 +1,7 @@
 // NexxoPsi — Tipos TypeScript
 
-export type LocalId = 'unimed' | 'aquarela' | 'anhangabau'
-export type PerfilClinico = 'adulto' | 'crianca' | 'neurodiverge' | 'mulher' | 'supervisao'
+export type LocalId = 'unimed' | 'aquarela' | 'ceped'
+export type PerfilClinico = 'adulto' | 'adulto_emocional' | 'adulto_neuro' | 'adolescente' | 'adolescente_emocional' | 'adolescente_neuro' | 'crianca' | 'crianca_emocional' | 'crianca_neuro' | 'supervisao'
 export type StatusAgendamento = 'agendado' | 'confirmado' | 'realizado' | 'cancelado' | 'aguardando'
 export type StatusFatura = 'aberto' | 'pago' | 'atrasado' | 'cancelado'
 export type StatusAnamnese = 'pendente' | 'enviado' | 'preenchido'
