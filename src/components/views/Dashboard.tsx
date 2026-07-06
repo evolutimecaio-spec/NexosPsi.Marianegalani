@@ -4,21 +4,36 @@ import { useRouter } from 'next/navigation'
 import { BarChart, Bar, ResponsiveContainer, Tooltip } from 'recharts'
 import { useStore } from '@/lib/store'
 import * as DB from '@/lib/db'
-import { fmtData, fmtMoeda, calcIdade } from '@/lib/db'
+import { fmtMoeda, calcIdade, getLocal } from '@/lib/db'
 import { CONFIG } from '@/lib/config'
 import { Empty } from '@/components/ui'
+import type { MetricasDashboard, Inadimplente, Agendamento } from '@/types'
 
 function Skel({ h = 20, w = '100%' }: { h?: number; w?: string }) {
   return <div style={{ height: h, width: w, borderRadius: 6, background: 'linear-gradient(90deg,var(--border) 25%,var(--warm) 50%,var(--border) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.2s infinite' }} />
 }
 
-export default function Dashboard() {
+interface Props {
+  initial?: {
+    metrics: MetricasDashboard
+    inad: Inadimplente[]
+    agHoje: Agendamento[]
+    pacientes: any[]
+  }
+}
+
+export default function Dashboard({ initial }: Props) {
   const router = useRouter()
-  const { metrics, inad, pronto } = useStore()
-  const [bdays, setBdays] = useState<{ paciente: any; diasAte: number }[]>([])
+  const store = useStore()
+
+  // Usar dados do servidor imediatamente, atualizar do store quando pronto
+  const metrics = store.pronto ? store.metrics : (initial?.metrics ?? null)
+  const inad    = store.pronto ? store.inad    : (initial?.inad ?? [])
+  const pronto  = !!initial || store.pronto
+
+  const [bdays, setBdays]     = useState<any[]>([])
   const [fatMeses, setFatMeses] = useState<{ mes: string; valor: number }[]>([])
 
-  // Dados secundários carregam em background
   useEffect(() => {
     if (!pronto) return
     DB.getAniversariantesSemana().then(setBdays).catch(() => {})
@@ -42,22 +57,12 @@ export default function Dashboard() {
     return <span className={`tag ${map[s]||'tag-agendado'}`}>{lbl[s]||s}</span>
   }
 
-  // Skeleton só na primeira carga
   if (!pronto) return (
     <div>
       <div className="metrics">
-        {[0,1,2,3].map(i => (
-          <div key={i} className="metric">
-            <Skel h={10} w="60%" /><div style={{height:6}}/>
-            <Skel h={30} w="45%" /><div style={{height:4}}/>
-            <Skel h={10} w="75%" />
-          </div>
-        ))}
+        {[0,1,2,3].map(i=><div key={i} className="metric"><Skel h={10} w="60%"/><div style={{height:6}}/><Skel h={30} w="45%"/><div style={{height:4}}/><Skel h={10} w="75%"/></div>)}
       </div>
-      <div className="g2">
-        <div className="card"><Skel h={170} /></div>
-        <div className="card"><Skel h={170} /></div>
-      </div>
+      <div className="g2"><div className="card"><Skel h={170}/></div><div className="card"><Skel h={170}/></div></div>
     </div>
   )
 
@@ -78,7 +83,7 @@ export default function Dashboard() {
           <div className="metric-label">Faturado no mês</div>
           <div className="metric-value" style={{fontSize:20}}>{fmtMoeda(metrics?.faturamentoMes)}</div>
           <div style={{marginTop:6,height:5,background:'var(--border)',borderRadius:3,overflow:'hidden'}}>
-            <div style={{height:'100%',width:`${pct}%`,background:'var(--success)',borderRadius:3,transition:'width 0.5s'}} />
+            <div style={{height:'100%',width:`${pct}%`,background:'var(--success)',borderRadius:3,transition:'width 0.5s'}}/>
           </div>
           <div className="metric-sub" style={{marginTop:4}}>{pct}% da meta</div>
         </div>
@@ -92,31 +97,29 @@ export default function Dashboard() {
       <div className="g2" style={{marginBottom:16}}>
         <div className="card">
           <div className="card-title"><i className="ti ti-chart-bar"/>Faturamento — últimos 5 meses</div>
-          {fatMeses.length > 0 ? (
-            <ResponsiveContainer width="100%" height={150}>
-              <BarChart data={fatMeses} margin={{top:4,right:4,bottom:0,left:0}}>
-                <Bar dataKey="valor" fill="var(--teal)" radius={[4,4,0,0]} />
-                <Tooltip formatter={(v) => fmtMoeda(Number(v))} labelFormatter={String} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : <Skel h={150} />}
+          {fatMeses.length > 0
+            ? <ResponsiveContainer width="100%" height={150}>
+                <BarChart data={fatMeses} margin={{top:4,right:4,bottom:0,left:0}}>
+                  <Bar dataKey="valor" fill="var(--teal)" radius={[4,4,0,0]}/>
+                  <Tooltip formatter={(v) => fmtMoeda(Number(v))} labelFormatter={String}/>
+                </BarChart>
+              </ResponsiveContainer>
+            : <Skel h={150}/>
+          }
         </div>
         <div className="card">
           <div className="card-title"><i className="ti ti-calendar-today"/>Agenda de hoje</div>
           {!metrics?.agHoje.length
-            ? <Empty icon="calendar-off" msg="Nenhuma sessão hoje" />
+            ? <Empty icon="calendar-off" msg="Nenhuma sessão hoje"/>
             : metrics.agHoje.map(ag => {
                 const pac = ag.paciente as any || {}
                 return (
                   <div key={ag.id} className="session-item"
-                    onClick={() => router.push(`/prontuario?id=${ag.paciente_id}`)}>
+                    onClick={()=>router.push(`/prontuario?id=${ag.paciente_id}`)}>
                     <div className="si-time">{ag.hora}</div>
-                    <div>
-                      <div className="si-name">{pac.nome || '?'}</div>
-                      <div className="si-type">{ag.tipo}</div>
-                    </div>
+                    <div><div className="si-name">{pac.nome||'?'}</div><div className="si-type">{ag.tipo}</div></div>
                     <div className="si-tags">
-                      <span className={`tag tag-${ag.modalidade === 'Online' ? 'online' : 'presencial'}`}>{ag.modalidade}</span>
+                      <span className={`tag tag-${ag.modalidade==='Online'?'online':'presencial'}`}>{ag.modalidade}</span>
                       {statusTag(ag.status)}
                     </div>
                   </div>
@@ -131,40 +134,30 @@ export default function Dashboard() {
           <div className="card-title" style={{color:'var(--danger)'}}><i className="ti ti-bell-ringing"/>Alertas financeiros</div>
           {!inad.length
             ? <div style={{fontSize:13,color:'var(--success)',display:'flex',alignItems:'center',gap:6}}><i className="ti ti-check"/>Em dia!</div>
-            : inad.slice(0,4).map(({paciente,fatura,diasAtraso}) => (
+            : inad.slice(0,4).map(({paciente,fatura,diasAtraso})=>(
                 <div key={fatura.id} className="alert-row" style={{cursor:'pointer'}}
-                  onClick={() => router.push(`/prontuario?id=${paciente.id}`)}>
+                  onClick={()=>router.push(`/prontuario?id=${paciente.id}`)}>
                   <div style={{flex:1}}>
                     <div className="alert-name">{paciente.nome}</div>
                     <div className="alert-msg">{diasAtraso}d em atraso · {fmtMoeda(fatura.valor)}</div>
                   </div>
-                  {paciente.fone && (
-                    <a href={`https://wa.me/${paciente.fone}`} target="_blank"
-                      onClick={e => e.stopPropagation()} className="btn btn-ghost btn-sm">
-                      <i className="ti ti-brand-whatsapp"/>
-                    </a>
-                  )}
+                  {paciente.fone&&<a href={`https://wa.me/${paciente.fone}`} target="_blank" onClick={e=>e.stopPropagation()} className="btn btn-ghost btn-sm"><i className="ti ti-brand-whatsapp"/></a>}
                 </div>
               ))
           }
-          {inad.length > 0 && <button className="btn btn-ghost btn-sm" style={{marginTop:8}} onClick={() => router.push('/alertas')}>Ver todos <i className="ti ti-arrow-right"/></button>}
+          {inad.length>0&&<button className="btn btn-ghost btn-sm" style={{marginTop:8}} onClick={()=>router.push('/alertas')}>Ver todos <i className="ti ti-arrow-right"/></button>}
         </div>
         <div className="card">
           <div className="card-title"><i className="ti ti-cake"/>Aniversariantes esta semana</div>
-          {bdays.length === 0
+          {bdays.length===0
             ? <div style={{fontSize:13,color:'var(--text3)'}}>Nenhum aniversariante.</div>
-            : bdays.map(({paciente,diasAte}) => (
+            : bdays.map(({paciente,diasAte})=>(
                 <div key={paciente.id} className="bday-item">
-                  <div className="bday-av" style={{background:DB.getLocal(paciente.local_id)?.cor||'var(--teal)'}}>
-                    {paciente.avatar||paciente.nome?.slice(0,2)}
-                  </div>
-                  <div style={{flex:1}}>
-                    <div className="bday-name">{paciente.nome}</div>
-                    <div className="bday-age">{calcIdade(paciente.nascimento)} anos</div>
-                  </div>
-                  {diasAte === 0 && <span className="badge b-red">🎂 Hoje</span>}
-                  {diasAte === 1 && <span style={{fontSize:11,color:'var(--warn)',fontWeight:600}}>Amanhã</span>}
-                  {diasAte > 1  && <span style={{fontSize:11,color:'var(--text3)'}}>{diasAte}d</span>}
+                  <div className="bday-av" style={{background:getLocal(paciente.local_id)?.cor||'var(--teal)'}}>{paciente.avatar||paciente.nome?.slice(0,2)}</div>
+                  <div style={{flex:1}}><div className="bday-name">{paciente.nome}</div><div className="bday-age">{calcIdade(paciente.nascimento)} anos</div></div>
+                  {diasAte===0&&<span className="badge b-red">🎂 Hoje</span>}
+                  {diasAte===1&&<span style={{fontSize:11,color:'var(--warn)',fontWeight:600}}>Amanhã</span>}
+                  {diasAte>1&&<span style={{fontSize:11,color:'var(--text3)'}}>{diasAte}d</span>}
                 </div>
               ))
           }

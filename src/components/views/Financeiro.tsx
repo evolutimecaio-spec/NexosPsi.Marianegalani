@@ -7,9 +7,12 @@ import { Empty } from '@/components/ui'
 import { fmtData, fmtMoeda } from '@/lib/db'
 import { CONFIG } from '@/lib/config'
 
-export default function Financeiro() {
+export default function Financeiro({ initialInad }: { initialInad?: any[] }) {
   const router = useRouter()
-  const { inad, pronto, reload } = useStore()
+  const store = useStore()
+  const inad   = store.pronto ? store.inad : (initialInad ?? store.inad)
+  const pronto = !!initialInad || store.pronto
+  const { reload } = store
   const [filtroLocal, setFiltroLocal] = useState('')
   const [fatMes, setFatMes] = useState(0)
 

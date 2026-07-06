@@ -11,8 +11,9 @@ const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov'
 const HORAS = ['08','09','10','11','12','13','14','15','16','17','18']
 const fmt = (d: Date) => d.toISOString().slice(0,10)
 
-export default function Agenda() {
-  const { pacientes } = useStore()
+export default function Agenda({ initialPacientes, initialAgs }: { initialPacientes?: any[]; initialAgs?: any[] }) {
+  const store = useStore()
+  const pacientes = store.pronto ? store.pacientes : (initialPacientes ?? store.pacientes)
   const [offset, setOffset]     = useState(0)
   const [ags, setAgs]           = useState<Agendamento[]>([])
   const [filtroLocal, setFiltro] = useState('')

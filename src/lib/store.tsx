@@ -10,11 +10,12 @@ interface Store {
   metrics:    MetricasDashboard | null
   alertCount: number
   pronto:     boolean
+  modoDemo:   boolean
   reload: (key?: 'pacientes'|'agenda'|'financeiro'|'all') => Promise<void>
 }
 
 const Ctx = createContext<Store>({
-  pacientes:[], agHoje:[], inad:[], metrics:null, alertCount:0, pronto:false,
+  pacientes:[], agHoje:[], inad:[], metrics:null, alertCount:0, pronto:false, modoDemo:false,
   reload: async () => {},
 })
 
@@ -24,6 +25,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [inad,      setInad]      = useState<Inadimplente[]>([])
   const [metrics,   setMetrics]   = useState<MetricasDashboard | null>(null)
   const [pronto,    setPronto]    = useState(false)
+  const [modoDemo,  setModoDemo]  = useState(false)
 
   const loadAll = useCallback(async () => {
     const hoje = DB.today()
@@ -34,11 +36,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       DB.getInadimplentes(),
       DB.getMetricasDashboard(),
     ])
-    if (pacs.status === 'fulfilled')    setPacientes(pacs.value)
+    if (pacs.status === 'fulfilled')    { setPacientes(pacs.value); setModoDemo(pacs.value[0]?.id === 'p1') }
     if (ags.status === 'fulfilled')     setAgHoje(ags.value)
     if (inadList.status === 'fulfilled') setInad(inadList.value)
     if (m.status === 'fulfilled')       setMetrics(m.value)
-    setPronto(true) // sempre vira true, independente de erros
+    setPronto(true)
   }, [])
 
   const reload = useCallback(async (key?: string) => {
@@ -68,7 +70,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => { loadAll() }, [loadAll])
 
   return (
-    <Ctx.Provider value={{ pacientes, agHoje, inad, metrics, alertCount: inad.length, pronto, reload }}>
+    <Ctx.Provider value={{ pacientes, agHoje, inad, metrics, alertCount: inad.length, pronto, modoDemo, reload }}>
       {children}
     </Ctx.Provider>
   )

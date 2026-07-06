@@ -2,8 +2,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { StoreProvider } from '@/lib/store'
+import { StoreProvider, useStore } from '@/lib/store'
 import AppSidebar from '@/components/layout/AppSidebar'
+import SetupCheck from '@/components/SetupCheck'
 import LoginPage from '@/components/layout/LoginPage'
 import * as DB from '@/lib/db'
 
@@ -20,6 +21,25 @@ const TITLES: Record<string, string> = {
   '/whatsapp':   'WhatsApp',
   '/usuarios':   'Usuários',
   '/config':     'Configurações',
+}
+
+function DemoBanner() {
+  const { modoDemo, pronto } = useStore()
+  if (!pronto || !modoDemo) return null
+  return (
+    <div style={{
+      background:'#FFF8E1', borderBottom:'2px solid #FFD740',
+      padding:'8px 20px', fontSize:12, color:'#7A5800',
+      display:'flex', alignItems:'center', gap:8,
+    }}>
+      <i className="ti ti-database-off" style={{fontSize:15}}/>
+      <strong>Modo demo</strong> — dados fictícios. Para salvar dados reais,{' '}
+      <a href="https://supabase.com/dashboard/project/wltxwmcraqdskjobraoy/sql/new"
+        target="_blank" style={{color:'#7A5800', fontWeight:700, textDecoration:'underline'}}>
+        execute o SETUP.sql no Supabase
+      </a>.
+    </div>
+  )
 }
 
 function AppShell({ children }: { children: React.ReactNode }) {
@@ -50,6 +70,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
         />
 
         <div className="main-area">
+          {/* Banner modo demo */}
+          <DemoBanner />
           <header className="topbar">
             <button className="topbar-menu-btn"
               onClick={() => setSidebarOpen(s => !s)}>

@@ -6,6 +6,18 @@ import type {
   Anamnese, Documento, MetricasDashboard, Inadimplente, Local
 } from '@/types'
 
+
+// Detecta se o erro é de banco não configurado (tabela não existe)
+function isBancoNaoConfigurado(error: any): boolean {
+  const msg = error?.message || error?.code || ''
+  return msg.includes('schema cache') || 
+         msg.includes('does not exist') || 
+         msg.includes('relation') ||
+         msg.includes('42P01') // PostgreSQL: undefined_table
+}
+
+const ERRO_BANCO = 'Banco não configurado. Execute o SETUP.sql no Supabase para salvar dados. Por enquanto, funciona em modo demo.'
+
 // ── Locais ───────────────────────────────────────────────────────
 export const LOCAIS: Record<string, Local> = {
   unimed:     { id: 'unimed',     nome: 'Unimed',            cor: '#1565C0', icon: 'building-hospital',  endereco: 'Unimed Jundiaí' },
@@ -68,7 +80,7 @@ export const getPaciente = (id: string) =>
 export async function addPaciente(dados: Omit<Paciente,'id'|'created_at'|'updated_at'|'sessoes_total'|'devedor_total'>): Promise<Paciente> {
   const row = { ...dados, avatar: dados.avatar || makeAvatar(dados.nome), sessoes_total: 0, devedor_total: 0 }
   const { data, error } = await supabase.from('pacientes').insert(row).select().single()
-  if (error || !data) throw new Error(error?.message || 'Erro ao cadastrar')
+  if (error || !data) throw new Error(isBancoNaoConfigurado(error) ? ERRO_BANCO : (error?.message || 'Erro ao cadastrar'))
   invalidate('pacientes')
   return data
 }
@@ -132,7 +144,7 @@ export async function addAgendamento(ag: {
     modalidade: ag.modalidade || 'Presencial',
     status: ag.status || 'agendado', pago: false,
   }).select(AGS_SELECT).single()
-  if (error || !data) throw new Error(error?.message || 'Erro ao agendar')
+  if (error || !data) throw new Error(isBancoNaoConfigurado(error) ? ERRO_BANCO : (error?.message || 'Erro ao agendar'))
   invalidate('ags:')
   return data
 }
@@ -189,7 +201,7 @@ export async function addFatura(pacienteId: string, fatura: {
   const { data, error } = await supabase.from('faturas').insert({
     paciente_id: pacienteId, ...fatura, status: 'aberto', pago: false,
   }).select().single()
-  if (error || !data) throw new Error(error?.message || 'Erro')
+  if (error || !data) throw new Error(isBancoNaoConfigurado(error) ? ERRO_BANCO : (error?.message || 'Erro'))
   invalidate('faturas:'); invalidate('inadimplentes'); invalidate('fat:')
   return data
 }
@@ -221,7 +233,7 @@ export async function addEvolucao(pacienteId: string, ev: {
     texto: ev.texto, cid: ev.cid || '', gerado_luma: ev.gerado_luma || false,
     transcricao: ev.transcricao || null,
   }).select().single()
-  if (error || !data) throw new Error(error?.message || 'Erro')
+  if (error || !data) throw new Error(isBancoNaoConfigurado(error) ? ERRO_BANCO : (error?.message || 'Erro'))
   const pac = await getPaciente(pacienteId)
   if (pac) { await updatePaciente(pacienteId, { sessoes_total: (pac.sessoes_total || 0) + 1 }) }
   return data
@@ -249,7 +261,7 @@ export async function addCartao(pacienteId: string, cartao: {
     gerado_luma: cartao.gerado_luma || false, ativo: true,
     validade: cartao.validade || 'Semanal',
   }).select().single()
-  if (error || !c) throw new Error(error?.message || 'Erro')
+  if (error || !c) throw new Error(isBancoNaoConfigurado(error) ? ERRO_BANCO : (error?.message || 'Erro'))
   if (cartao.tarefas.length) {
     await supabase.from('tarefas_cartao').insert(
       cartao.tarefas.map((t, i) => ({ cartao_id: c.id, titulo: t.titulo, descricao: t.descricao || '', feita: false, ordem: i }))
@@ -276,7 +288,7 @@ export async function addAnamnese(pacienteId: string, modelo: string): Promise<A
   const { data, error } = await supabase.from('anamneses').insert({
     paciente_id: pacienteId, modelo, status: 'enviado', enviado_em: new Date().toISOString(),
   }).select().single()
-  if (error || !data) throw new Error(error?.message || 'Erro')
+  if (error || !data) throw new Error(isBancoNaoConfigurado(error) ? ERRO_BANCO : (error?.message || 'Erro'))
   return data
 }
 

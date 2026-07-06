@@ -13,11 +13,14 @@ function Skel({ h = 20 }: { h?: number }) {
   return <div style={{ height: h, borderRadius: 6, background: 'linear-gradient(90deg,var(--border) 25%,var(--warm) 50%,var(--border) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.2s infinite', marginBottom: 8 }} />
 }
 
-function ProntuarioInner() {
+function ProntuarioInner({ initialPacientes }: { initialPacientes?: any[] }) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const idParam = searchParams.get('id')
-  const { pacientes, pronto, reload } = useStore()
+  const store = useStore()
+  const pacientes = store.pronto ? store.pacientes : (initialPacientes ?? store.pacientes)
+  const pronto    = !!initialPacientes || store.pronto
+  const { reload } = store
 
   const [sel,  setSel]    = useState<Paciente|null>(null)
   const [aba,  setAba]    = useState<Aba>('ev')
@@ -351,10 +354,10 @@ function ProntuarioInner() {
   )
 }
 
-export default function Prontuario() {
+export default function Prontuario({ initialPacientes }: { initialPacientes?: any[] }) {
   return (
     <Suspense fallback={<div style={{padding:40,color:'var(--text3)'}}>Carregando...</div>}>
-      <ProntuarioInner />
+      <ProntuarioInner initialPacientes={initialPacientes} />
     </Suspense>
   )
 }
