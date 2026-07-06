@@ -17,18 +17,23 @@ export default function Dashboard() {
   const { metrics, inad, pronto } = useStore()
 
   const [bdays, setBdays]     = useState<any[]>([])
-  const [fatMeses, setFatMeses] = useState<{ mes: string; valor: number }[]>([])
+  const MESES_NOMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+  const fatMesesInicial = Array.from({ length: 5 }, (_, i) => {
+    const hoje = new Date()
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - (4 - i), 1)
+    return { mes: MESES_NOMES[d.getMonth()], valor: 0 }
+  })
+  const [fatMeses, setFatMeses] = useState<{ mes: string; valor: number }[]>(fatMesesInicial)
 
   useEffect(() => {
     if (!pronto) return
     DB.getAniversariantesSemana().then(setBdays).catch(() => {})
-    const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-    const hoje = new Date()
+    const hoje2 = new Date()
     Promise.all(
       Array.from({ length: 5 }, (_, i) => {
-        const d = new Date(hoje.getFullYear(), hoje.getMonth() - (4 - i), 1)
+        const d = new Date(hoje2.getFullYear(), hoje2.getMonth() - (4 - i), 1)
         const ms = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
-        return DB.getFaturamentoMes(ms).then(v => ({ mes: MESES[d.getMonth()], valor: v }))
+        return DB.getFaturamentoMes(ms).then(v => ({ mes: MESES_NOMES[d.getMonth()], valor: v }))
       })
     ).then(setFatMeses).catch(() => {})
   }, [pronto])
@@ -82,15 +87,17 @@ export default function Dashboard() {
       <div className="g2" style={{marginBottom:16}}>
         <div className="card">
           <div className="card-title"><i className="ti ti-chart-bar"/>Faturamento — últimos 5 meses</div>
-          {fatMeses.length > 0
-            ? <ResponsiveContainer width="100%" height={150}>
-                <BarChart data={fatMeses} margin={{top:4,right:4,bottom:0,left:0}}>
-                  <Bar dataKey="valor" fill="var(--teal)" radius={[4,4,0,0]}/>
-                  <Tooltip formatter={(v) => fmtMoeda(Number(v))} labelFormatter={String}/>
-                </BarChart>
-              </ResponsiveContainer>
-            : <Skel h={150}/>
-          }
+          <ResponsiveContainer width="100%" height={150}>
+            <BarChart data={fatMeses} margin={{top:4,right:4,bottom:0,left:0}}>
+              <Bar dataKey="valor" fill="var(--teal)" radius={[4,4,0,0]}/>
+              <Tooltip formatter={(v) => fmtMoeda(Number(v))} labelFormatter={String}/>
+            </BarChart>
+          </ResponsiveContainer>
+          {fatMeses.every(m => m.valor === 0) && (
+            <div style={{textAlign:'center',fontSize:11,color:'var(--text3)',marginTop:6}}>
+              Sem faturamento registrado ainda. Registre pagamentos para ver o gráfico.
+            </div>
+          )}
         </div>
         <div className="card">
           <div className="card-title"><i className="ti ti-calendar-today"/>Agenda de hoje</div>

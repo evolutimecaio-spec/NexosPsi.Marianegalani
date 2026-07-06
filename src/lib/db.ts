@@ -56,14 +56,9 @@ function safe<T>(data: T | null, error: unknown): T | null {
 // PACIENTES — cache 60s
 // ══════════════════════════════════════════════════════════════════
 async function _fetchPacientes(): Promise<Paciente[]> {
-  try {
-    const { data, error } = await supabase.from('pacientes').select('*').eq('ativo', true).order('nome')
-    if (error || !data || data.length === 0) throw new Error('vazio')
-    return data
-  } catch {
-    const { DEMO_PACIENTES } = await import('./demo')
-    return DEMO_PACIENTES
-  }
+  const { data, error } = await supabase.from('pacientes').select('*').eq('ativo', true).order('nome')
+  if (error) { console.warn('[DB] pacientes:', error.message); return [] }
+  return data ?? []
 }
 
 export const getPacientes = (filtros?: { local_id?: string; perfil?: string }) =>
@@ -106,23 +101,8 @@ async function _fetchAgendamentos(filtros: {
     if (filtros.pacienteId) q = q.eq('paciente_id', filtros.pacienteId)
     const { data, error } = await q
     if (error || !data) throw new Error('erro')
-    if (data.length === 0 && !filtros.pacienteId) {
-      const { DEMO_AGENDAMENTOS } = await import('./demo')
-      let ags = DEMO_AGENDAMENTOS
-      if (filtros.data) ags = ags.filter(a => a.data === filtros.data)
-      if (filtros.dataIni) ags = ags.filter(a => a.data >= filtros.dataIni!)
-      if (filtros.dataFim) ags = ags.filter(a => a.data <= filtros.dataFim!)
-      return ags
-    }
     return data
-  } catch {
-    const { DEMO_AGENDAMENTOS } = await import('./demo')
-    let ags = DEMO_AGENDAMENTOS
-    if (filtros.data) ags = ags.filter(a => a.data === filtros.data)
-    if (filtros.dataIni) ags = ags.filter(a => a.data >= filtros.dataIni!)
-    if (filtros.dataFim) ags = ags.filter(a => a.data <= filtros.dataFim!)
-    return ags
-  }
+  } catch { return [] }
 }
 
 export const getAgendamentos = (filtros: {
@@ -173,20 +153,13 @@ export const getInadimplentes = (): Promise<Inadimplente[]> =>
     try {
       const { data, error } = await supabase.from('faturas')
         .select(FAT_SELECT).eq('pago', false).lte('vencimento', today()).order('vencimento')
-      if (error || !data) throw new Error('erro')
-      if (data.length === 0) {
-        const { DEMO_INADIMPLENTES } = await import('./demo')
-        return DEMO_INADIMPLENTES
-      }
+      if (error || !data) return []
       return data.map((f: Fatura) => ({
         paciente: f.paciente as Inadimplente['paciente'],
         fatura: { id: f.id, valor: f.valor, vencimento: f.vencimento, status: f.status },
         diasAtraso: Math.round((Date.now() - new Date(f.vencimento).getTime()) / 86400000),
       }))
-    } catch {
-      const { DEMO_INADIMPLENTES } = await import('./demo')
-      return DEMO_INADIMPLENTES
-    }
+    } catch { return [] }
   })
 
 export const getFaturamentoMes = (mes: string) =>

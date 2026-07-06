@@ -4,12 +4,12 @@ export const CONFIG = {
   psicologa: {
     nome:      'Mariane Galani',
     crp:       '06/XXXXX',
-    cpf:       '123.456.789-00',
-    email:     'mariane@email.com',
-    whatsapp:  '5511999990000',
-    endereco:  'R. Exemplo, 123 – Jundiaí, SP',
+    cpf:       '',
+    email:     '',
+    whatsapp:  '',
+    endereco:  '',
     cidade:    'Jundiaí, SP',
-    instagram: '@marianeGalani',
+    instagram: '',
   },
   financeiro: {
     valorSessaoPadrao:     180,

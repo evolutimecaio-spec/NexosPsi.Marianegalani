@@ -1,6 +1,5 @@
 'use client'
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { DEMO_PACIENTES, DEMO_AGENDAMENTOS, DEMO_INADIMPLENTES } from './demo'
 import * as DB from './db'
 import type { Paciente, Agendamento, Inadimplente, MetricasDashboard } from '@/types'
 
@@ -16,8 +15,8 @@ interface Store {
 }
 
 const Ctx = createContext<Store>({
-  pacientes: DEMO_PACIENTES, agHoje: [], inad: DEMO_INADIMPLENTES,
-  metrics: null, alertCount: 2, pronto: true, modoDemo: true,
+  pacientes: [], agHoje: [], inad: [],
+  metrics: null, alertCount: 0, pronto: false, modoDemo: false,
   reload: async () => {},
 })
 
@@ -31,19 +30,14 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const hoje = DB.today()
-  const demAgs = DEMO_AGENDAMENTOS.filter(a => a.data === hoje)
 
-  // Inicializar com dados demo IMEDIATAMENTE — sem tela branca
-  const [pacientes, setPacientes] = useState<Paciente[]>(DEMO_PACIENTES)
-  const [agHoje,    setAgHoje]    = useState<Agendamento[]>(demAgs)
-  const [inad,      setInad]      = useState<Inadimplente[]>(DEMO_INADIMPLENTES)
+  // Inicializar vazio — banco da Mariane estará limpo
+  const [pacientes, setPacientes] = useState<Paciente[]>([])
+  const [agHoje,    setAgHoje]    = useState<Agendamento[]>([])
+  const [inad,      setInad]      = useState<Inadimplente[]>([])
   const [metrics,   setMetrics]   = useState<MetricasDashboard>({
-    sessoesHoje: demAgs.length,
-    confirmados: demAgs.filter(a => a.status === 'confirmado').length,
-    totalSessoesMes: demAgs.length,
-    faturamentoMes: 0,
-    totalDevedor: DEMO_INADIMPLENTES.reduce((s,i) => s + Number(i.fatura.valor), 0),
-    agHoje: demAgs,
+    sessoesHoje: 0, confirmados: 0, totalSessoesMes: 0,
+    faturamentoMes: 0, totalDevedor: 0, agHoje: [],
   })
   const [pronto,   setPronto]   = useState(true)  // pronto desde o início com demo
   const [modoDemo, setModoDemo] = useState(true)
@@ -52,12 +46,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       // Tentar Supabase com timeout de 3s cada
       const [pacs, ags, inadList] = await Promise.all([
-        withTimeout(DB.getPacientes(),          3000, DEMO_PACIENTES),
-        withTimeout(DB.getAgendamentosDia(hoje), 3000, demAgs),
-        withTimeout(DB.getInadimplentes(),       3000, DEMO_INADIMPLENTES),
+        withTimeout(DB.getPacientes(),          5000, []),
+        withTimeout(DB.getAgendamentosDia(hoje), 5000, []),
+        withTimeout(DB.getInadimplentes(),       5000, []),
       ])
 
-      const isDemo = pacs[0]?.id === 'p1'
+      const isDemo = false
       setModoDemo(isDemo)
       setPacientes(pacs)
       setAgHoje(ags)
@@ -81,15 +75,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const reload = useCallback(async (key?: string) => {
     try {
       if (!key || key === 'all' || key === 'pacientes') {
-        const p = await withTimeout(DB.getPacientes(), 3000, DEMO_PACIENTES)
-        setPacientes(p); setModoDemo(p[0]?.id === 'p1')
+        const p = await withTimeout(DB.getPacientes(), 5000, [])
+        setPacientes(p); setModoDemo(false)
       }
       if (!key || key === 'all' || key === 'agenda') {
-        const a = await withTimeout(DB.getAgendamentosDia(hoje), 3000, demAgs)
+        const a = await withTimeout(DB.getAgendamentosDia(hoje), 5000, [])
         setAgHoje(a)
       }
       if (!key || key === 'all' || key === 'financeiro') {
-        const i = await withTimeout(DB.getInadimplentes(), 3000, DEMO_INADIMPLENTES)
+        const i = await withTimeout(DB.getInadimplentes(), 5000, [])
         setInad(i)
       }
     } catch { /* mantém estado atual */ }

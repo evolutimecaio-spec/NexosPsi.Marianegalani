@@ -36,10 +36,6 @@ export default function LoginPage({ onLogin }: { onLogin: (senha: string) => Pro
           </button>
         </form>
 
-        <div style={{ marginTop: 24, padding: '12px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Demo</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Senha: <strong style={{ color: 'rgba(144,208,208,0.8)' }}>mariane2025</strong></div>
-        </div>
       </div>
     </div>
   )

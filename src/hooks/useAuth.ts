@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 
-const HASH_CORRETO = '9b2a95534511812f0fe3a7407822b796b928fcf9bb7e93f9c477e756182cf02d'
+const HASH_CORRETO = '6f74c0c3a74ed1c19556f275e242384435d7073e1343bf4a25977a9d6fe5452d'
 const SESSION_KEY  = 'nexopsi_auth'
 const TS_KEY       = 'nexopsi_ts'
 const HORAS        = 8
