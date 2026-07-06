@@ -18,14 +18,14 @@ function buildMsg(pac: Paciente, tipo: Tipo, agHoje: any[]): string {
 
   switch(tipo) {
     case 'lembrete':
-      return `Olá, ${nome}! 🌿\n\nPassando para lembrar da sua sessão *amanhã, ${dataHoje} às ${hora}* com ${CONFIG.psicologa.nome}.\n${local}\n\nPor favor confirme respondendo *SIM* ou *NÃO*.\n\nAté lá! 💚`
+      return `Olá, ${nome}! \n\nPassando para lembrar da nossa sessão *${dataHoje} às ${hora}*.\n${local}\n\nPode confirmar respondendo *SIM* ou *NÃO*.\n\nAté lá! `
     case 'boasvindas':
-      return `Olá, ${nome}! 🌸\n\nSeja bem-vinde! Sou a ${CONFIG.psicologa.nome}, psicóloga (CRP ${CONFIG.psicologa.crp}).\n\nSua primeira sessão está marcada para *${dataHoje} às ${hora}*. ${local}\n\nEm caso de cancelamento, avise com pelo menos 24h de antecedência.\n\nQualquer dúvida, estou por aqui! 💚`
+      return `Olá, ${nome}! \n\nSeja bem-vinde! Fico muito feliz em te ter aqui.\n\nSou a ${CONFIG.psicologa.nome}, psicóloga (CRP ${CONFIG.psicologa.crp}).\n\nNossa primeira sessão está marcada para *${dataHoje} às ${hora}*. ${local}\n\nEm caso de cancelamento, avise com pelo menos 24h de antecedência.\n\nQualquer dúvida, estou por aqui! `
     case 'cobranca':
       const valor = pac.devedor_total > 0 ? fmtMoeda(pac.devedor_total) : 'o valor em aberto'
-      return `Olá, ${nome}! 🌿\n\nPassando para lembrar sobre o pagamento de ${valor} referente às suas sessões.\n\nVocê pode quitar pelo PIX: *${CONFIG.financeiro.chavePix}*\n\nSe já pagou, desconsidere. Obrigada! 😊`
+      return `Olá, ${nome}! \n\nPassando para te lembrar sobre o pagamento de ${valor} referente às nossas sessões.\n\nPode pagar pelo PIX: *${CONFIG.financeiro.chavePix}*\n\nSe já pagou, desconsidere. Obrigada! `
     case 'cartao':
-      return `Oi, ${nome}! 🌿\n\nSuas atividades terapêuticas da semana estão prontas.\n\n1. Registro diário de humor\n2. Respiração 4-7-8 pela manhã\n3. Identificar 1 pensamento automático\n\nLembre-se: cada tarefa é um passo na sua jornada! 💚`
+      return `Oi, ${nome}! \n\nPreparei as suas atividades terapêuticas para esta semana.\n\n1. Registro diário de humor\n2. Respiração 4-7-8 pela manhã\n3. Identificar 1 pensamento automático\n\nQualquer dúvida, pode me perguntar. Estou torcendo por você! `
     default:
       return ''
   }
@@ -57,10 +57,10 @@ export default function WhatsApp() {
   }
 
   const TIPOS: [Tipo,string][] = [
-    ['lembrete','📅 Lembrete de sessão'],
-    ['boasvindas','🌸 Boas-vindas'],
-    ['cobranca','💰 Cobrança'],
-    ['cartao','🃏 Cartão terapêutico'],
+    ['lembrete',' Lembrete de sessão'],
+    ['boasvindas',' Boas-vindas'],
+    ['cobranca',' Cobrança'],
+    ['cartao',' Cartão terapêutico'],
     ['livre','✏️ Mensagem livre'],
   ]
 

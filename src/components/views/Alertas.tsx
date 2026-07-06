@@ -20,17 +20,18 @@ interface Alerta {
 }
 
 function buildMsgSessao(pac: Paciente, data: string, hora: string): string {
-  return `Olá, ${pac.nome.split(' ')[0]}! 🌿\n\nPassando para lembrar da sua sessão *${fmtData(data)} às ${hora}* com ${CONFIG.psicologa.nome}.\n${pac.modalidade === 'Online' ? 'O link será enviado em breve.' : `Local: ${CONFIG.psicologa.endereco}.`}\n\nPor favor confirme respondendo *SIM* ou *NÃO*.\n\nAté lá! 💚`
+  const local = pac.modalidade === 'Online' ? 'Envio o link um pouco antes.' : `Nos encontramos em ${CONFIG.psicologa.endereco}.`
+  return `Olá, ${pac.nome.split(' ')[0]}!\n\nPassando para lembrar da nossa sessão *${fmtData(data)} às ${hora}*.\n${local}\n\nPode confirmar respondendo *SIM* ou *NÃO*?\n\nAté lá!`
 }
 function buildMsgCobranca(pac: Paciente, valor: number): string {
-  return `Olá, ${pac.nome.split(' ')[0]}! 🌿\n\nPassando para lembrar sobre o pagamento de *${fmtMoeda(valor)}* referente às suas sessões.\n\nPIX: *${CONFIG.financeiro.chavePix}*\n\nSe já pagou, desconsidere. Obrigada! 😊`
+  return `Olá, ${pac.nome.split(' ')[0]}!\n\nPassando para te lembrar sobre o pagamento de *${fmtMoeda(valor)}* referente às nossas sessões.\n\nPode pagar pelo PIX: *${CONFIG.financeiro.chavePix}*\n\nSe já realizou o pagamento, desconsidere. Obrigada!`
 }
 function buildMsgAnamnese(pac: Paciente): string {
-  return `Olá, ${pac.nome.split(' ')[0]}! 🌸\n\nAqui é ${CONFIG.psicologa.nome}. Para prepararmos nossa primeira conversa, gostaria que você preenchesse a ficha de anamnese.\n\nResponda com calma — tudo é confidencial. Qualquer dúvida, estou por aqui! 🌿`
+  return `Olá, ${pac.nome.split(' ')[0]}!\n\nAntes da nossa primeira sessão, gostaria que você preenchesse uma ficha de anamnese para me ajudar a te conhecer melhor.\n\nResponda com calma, tudo que você compartilhar é confidencial. Qualquer dúvida, pode me chamar aqui!`
 }
 function buildMsgCartao(pac: Paciente, tarefas: string[]): string {
   const lista = tarefas.map((t,i) => `${i+1}. ${t}`).join('\n')
-  return `Oi, ${pac.nome.split(' ')[0]}! 🌿\n\nSuas atividades terapêuticas da semana estão prontas:\n\n${lista}\n\nLembre-se: cada tarefa é um passo na sua jornada! 💚`
+  return `Olá, ${pac.nome.split(' ')[0]}!\n\nPreparei as suas atividades terapêuticas para esta semana:\n\n${lista}\n\nQualquer dúvida sobre as atividades, pode me perguntar. Estou torcendo por você!`
 }
 
 export default function Alertas() {
