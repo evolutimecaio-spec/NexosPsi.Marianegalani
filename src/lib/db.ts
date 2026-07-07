@@ -63,9 +63,17 @@ function safe<T>(data: T | null, error: unknown): T | null {
 // PACIENTES — cache 60s
 // ══════════════════════════════════════════════════════════════════
 async function _fetchPacientes(): Promise<Paciente[]> {
-  const { data, error } = await supabase.from('pacientes').select('*').eq('ativo', true).order('nome')
-  if (error) { console.warn('[DB] pacientes:', error.message); return [] }
-  return data ?? []
+  for (let i = 0; i < 3; i++) {
+    const { data, error } = await supabase.from('pacientes').select('*').eq('ativo', true).order('nome')
+    if (!error) return data ?? []
+    if (error.message?.includes('schema cache') && i < 2) {
+      await new Promise(r => setTimeout(r, 1500 * (i + 1)))
+      continue
+    }
+    console.warn('[DB] pacientes:', error.message)
+    return []
+  }
+  return []
 }
 
 export const getPacientes = (filtros?: { local_id?: string; perfil?: string }) =>
@@ -162,8 +170,15 @@ export const getFaturas = (pacienteId?: string) =>
 export const getInadimplentes = (): Promise<Inadimplente[]> =>
   cached('inadimplentes', 60_000, async () => {
     try {
-      const { data, error } = await supabase.from('faturas')
-        .select(FAT_SELECT).eq('pago', false).lte('vencimento', today()).order('vencimento')
+      let data = null, error: any = null
+      for (let i = 0; i < 3; i++) {
+        const r = await supabase.from('faturas')
+          .select(FAT_SELECT).eq('pago', false).lte('vencimento', today()).order('vencimento')
+        data = r.data; error = r.error
+        if (!error) break
+        if (error.message?.includes('schema cache') && i < 2) { await new Promise(r2 => setTimeout(r2, 1500)); continue }
+        break
+      }
       if (error || !data) return []
       return data.map((f: Fatura) => ({
         paciente: f.paciente as Inadimplente['paciente'],

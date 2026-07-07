@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useStore } from '@/lib/store'
 import * as DB from '@/lib/db'
-import { Modal, useToast } from '@/components/ui'
+import { Modal, useToast, erroLegivel } from '@/components/ui'
 import type { Agendamento } from '@/types'
 import { getLocal, fmtData, fmtMoeda } from '@/lib/db'
 
@@ -70,7 +70,7 @@ export default function Agenda() {
       }
       setModalNova(null); setFormPacId(''); setRecorrente(false)
       await load(); reload('agenda')
-    } catch(e:any){ toast(e.message,'danger') }
+    } catch(e:any){ toast(erroLegivel(e),'danger') }
     finally { setSaving(false) }
   }
 

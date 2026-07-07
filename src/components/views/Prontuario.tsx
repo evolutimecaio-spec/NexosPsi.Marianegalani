@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useStore } from '@/lib/store'
 import * as DB from '@/lib/db'
-import { Modal, useToast, Empty } from '@/components/ui'
+import { Modal, useToast, Empty, erroLegivel } from '@/components/ui'
 import type { Paciente, Evolucao, Fatura, Cartao, Documento } from '@/types'
 import { getLocal, fmtData, fmtMoeda, calcIdade } from '@/lib/db'
 import { perfilLabel } from '@/lib/config-clinica'
@@ -85,7 +85,7 @@ function ProntuarioInner() {
       toast('Evolução salva!')
       setFormEv(''); setShowFormEv(false)
       setEvs(await DB.getEvolucoes(sel.id))
-    } catch(e:any){ toast(e.message,'danger') }
+    } catch(e:any){ toast(erroLegivel(e),'danger') }
     finally { setSaving(false) }
   }
 
@@ -107,7 +107,7 @@ function ProntuarioInner() {
       toast('Paciente cadastrado!')
       setModalPac(false)
       await reload('pacientes')
-    } catch(e:any){ toast(e.message,'danger') }
+    } catch(e:any){ toast(erroLegivel(e),'danger') }
     finally { setSaving(false) }
   }
 

@@ -126,3 +126,13 @@ export function Confirm({ open, onClose, onConfirm, title, msg }: {
     </Modal>
   )
 }
+
+// Filtra erros técnicos do Supabase e retorna mensagem legível
+export function erroLegivel(e: any): string {
+  const msg: string = e?.message || String(e) || 'Erro desconhecido'
+  if (msg.includes('schema cache'))   return 'Conexão com banco instável. Tente novamente em alguns segundos.'
+  if (msg.includes('Failed to fetch')) return 'Sem conexão com o servidor. Verifique sua internet.'
+  if (msg.includes('JWT'))            return 'Sessão expirada. Recarregue a página.'
+  if (msg.includes('violates'))       return 'Dados inválidos. Verifique os campos obrigatórios.'
+  return msg
+}

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useStore } from '@/lib/store'
 import * as DB from '@/lib/db'
-import { Empty, useToast } from '@/components/ui'
+import { Empty, useToast, erroLegivel } from '@/components/ui'
 import { fmtData, fmtMoeda } from '@/lib/db'
 import { gerarFaturasMes } from '@/lib/db'
 import { CONFIG } from '@/lib/config'
@@ -31,7 +31,7 @@ export default function Financeiro() {
       const { geradas, erros } = await gerarFaturasMes(mes)
       toast(geradas > 0 ? `${geradas} faturas geradas!` : 'Nenhuma sessão realizada sem fatura ainda.')
       if (geradas > 0) reload('financeiro')
-    } catch(e:any){ toast(e.message,'danger') }
+    } catch(e:any){ toast(erroLegivel(e),'danger') }
     finally { setGerandoFatura(false) }
   }
 
