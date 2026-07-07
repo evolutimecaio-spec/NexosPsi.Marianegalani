@@ -1,85 +1,199 @@
 import { NextResponse } from 'next/server'
 
-// SQL executado automaticamente via Supabase Management API
-// Requer SUPABASE_SERVICE_ROLE_KEY nas variáveis de ambiente da Vercel
 const SETUP_SQL = `
-create extension if not exists "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-create table if not exists configuracoes (id text primary key default 'nexopsi', dados jsonb not null default '{}'::jsonb, updated_at timestamptz default now());
-create table if not exists pacientes (id uuid primary key default uuid_generate_v4(), nome text not null, avatar text default '', nascimento date, sexo text default '', cpf text default '', fone text default '', email text default '', endereco text default '', cid text default '', modalidade text default 'Presencial', local_id text default 'unimed', perfil text[] default '{}', valor_sessao numeric(10,2) default 180, venc_dia int default 10, sessoes_total int default 0, devedor_total numeric(10,2) default 0, obs text default '', ativo boolean default true, created_at timestamptz default now(), updated_at timestamptz default now());
-create table if not exists agendamentos (id uuid primary key default uuid_generate_v4(), paciente_id uuid references pacientes(id) on delete cascade, data date not null, hora text not null, tipo text default 'Terapia Individual', modalidade text default 'Presencial', local_id text default '', status text default 'agendado', valor_sessao numeric(10,2) default 0, pago boolean default false, obs text default '', created_at timestamptz default now(), updated_at timestamptz default now());
-create table if not exists faturas (id uuid primary key default uuid_generate_v4(), paciente_id uuid references pacientes(id) on delete cascade, mes text not null, valor numeric(10,2) not null, sessoes_count int default 0, vencimento date not null, pago boolean default false, status text default 'aberto', data_pagamento date, created_at timestamptz default now());
-create table if not exists evolucoes (id uuid primary key default uuid_generate_v4(), paciente_id uuid references pacientes(id) on delete cascade, data date not null default current_date, sessao_num int, texto text not null, cid text default '', gerado_luma boolean default false, transcricao text, created_at timestamptz default now());
-create table if not exists cartoes (id uuid primary key default uuid_generate_v4(), paciente_id uuid references pacientes(id) on delete cascade, titulo text not null, gerado_luma boolean default false, ativo boolean default true, validade text default 'Semanal', created_at timestamptz default now(), updated_at timestamptz default now());
-create table if not exists tarefas_cartao (id uuid primary key default uuid_generate_v4(), cartao_id uuid references cartoes(id) on delete cascade, titulo text not null, descricao text default '', feita boolean default false, ordem int default 0);
-create table if not exists anamneses (id uuid primary key default uuid_generate_v4(), paciente_id uuid references pacientes(id) on delete cascade, modelo text not null, status text default 'enviado', enviado_em timestamptz default now(), respondido_em timestamptz, respostas jsonb default '{}'::jsonb, created_at timestamptz default now());
-create table if not exists documentos (id uuid primary key default uuid_generate_v4(), paciente_id uuid references pacientes(id) on delete cascade, nome text not null, tipo text default 'Documento', url text default '', created_at timestamptz default now());
+CREATE TABLE IF NOT EXISTS configuracoes (
+  id text PRIMARY KEY DEFAULT 'nexopsi',
+  dados jsonb NOT NULL DEFAULT '{}'::jsonb,
+  updated_at timestamptz DEFAULT now()
+);
 
-alter table configuracoes   enable row level security;
-alter table pacientes       enable row level security;
-alter table agendamentos    enable row level security;
-alter table faturas         enable row level security;
-alter table evolucoes       enable row level security;
-alter table cartoes         enable row level security;
-alter table tarefas_cartao  enable row level security;
-alter table anamneses       enable row level security;
-alter table documentos      enable row level security;
+CREATE TABLE IF NOT EXISTS pacientes (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  nome text NOT NULL,
+  avatar text DEFAULT '',
+  nascimento date,
+  sexo text DEFAULT '',
+  cpf text DEFAULT '',
+  fone text DEFAULT '',
+  email text DEFAULT '',
+  endereco text DEFAULT '',
+  cid text DEFAULT '',
+  modalidade text DEFAULT 'Presencial',
+  local_id text DEFAULT 'unimed',
+  perfil text[] DEFAULT '{}',
+  valor_sessao numeric(10,2) DEFAULT 180,
+  venc_dia int DEFAULT 10,
+  sessoes_total int DEFAULT 0,
+  devedor_total numeric(10,2) DEFAULT 0,
+  obs text DEFAULT '',
+  ativo boolean DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
 
-do $pol$ begin
-  if not exists (select 1 from pg_policies where tablename='pacientes' and policyname='anon_all') then
-    create policy "anon_all" on configuracoes   for all using (true) with check (true);
-    create policy "anon_all" on pacientes       for all using (true) with check (true);
-    create policy "anon_all" on agendamentos    for all using (true) with check (true);
-    create policy "anon_all" on faturas         for all using (true) with check (true);
-    create policy "anon_all" on evolucoes       for all using (true) with check (true);
-    create policy "anon_all" on cartoes         for all using (true) with check (true);
-    create policy "anon_all" on tarefas_cartao  for all using (true) with check (true);
-    create policy "anon_all" on anamneses       for all using (true) with check (true);
-    create policy "anon_all" on documentos      for all using (true) with check (true);
-  end if;
-end $pol$;
+CREATE TABLE IF NOT EXISTS agendamentos (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  paciente_id uuid REFERENCES pacientes(id) ON DELETE CASCADE,
+  data date NOT NULL,
+  hora text NOT NULL,
+  tipo text DEFAULT 'Terapia Individual',
+  modalidade text DEFAULT 'Presencial',
+  local_id text DEFAULT '',
+  status text DEFAULT 'agendado',
+  valor_sessao numeric(10,2) DEFAULT 0,
+  pago boolean DEFAULT false,
+  obs text DEFAULT '',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
 
-create or replace function set_updated_at() returns trigger language plpgsql as $$ begin new.updated_at = now(); return new; end; $$;
-do $trg$ begin
-  if not exists (select 1 from pg_trigger where tgname='t_pac_upd') then
-    create trigger t_pac_upd  before update on pacientes    for each row execute procedure set_updated_at();
-    create trigger t_ag_upd   before update on agendamentos for each row execute procedure set_updated_at();
-    create trigger t_cart_upd before update on cartoes      for each row execute procedure set_updated_at();
+CREATE TABLE IF NOT EXISTS faturas (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  paciente_id uuid REFERENCES pacientes(id) ON DELETE CASCADE,
+  mes text NOT NULL,
+  valor numeric(10,2) NOT NULL,
+  sessoes_count int DEFAULT 0,
+  vencimento date NOT NULL,
+  pago boolean DEFAULT false,
+  status text DEFAULT 'aberto',
+  data_pagamento date,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS evolucoes (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  paciente_id uuid REFERENCES pacientes(id) ON DELETE CASCADE,
+  data date NOT NULL DEFAULT CURRENT_DATE,
+  sessao_num int,
+  texto text NOT NULL,
+  cid text DEFAULT '',
+  gerado_luma boolean DEFAULT false,
+  transcricao text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS cartoes (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  paciente_id uuid REFERENCES pacientes(id) ON DELETE CASCADE,
+  titulo text NOT NULL,
+  gerado_luma boolean DEFAULT false,
+  ativo boolean DEFAULT true,
+  validade text DEFAULT 'Semanal',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS tarefas_cartao (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  cartao_id uuid REFERENCES cartoes(id) ON DELETE CASCADE,
+  titulo text NOT NULL,
+  descricao text DEFAULT '',
+  feita boolean DEFAULT false,
+  ordem int DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS anamneses (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  paciente_id uuid REFERENCES pacientes(id) ON DELETE CASCADE,
+  modelo text NOT NULL,
+  status text DEFAULT 'enviado',
+  enviado_em timestamptz DEFAULT now(),
+  respondido_em timestamptz,
+  respostas jsonb DEFAULT '{}'::jsonb,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS documentos (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  paciente_id uuid REFERENCES pacientes(id) ON DELETE CASCADE,
+  nome text NOT NULL,
+  tipo text DEFAULT 'Documento',
+  url text DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+
+DO $rls$ BEGIN
+  ALTER TABLE configuracoes  ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE pacientes      ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE agendamentos   ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE faturas        ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE evolucoes      ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE cartoes        ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE tarefas_cartao ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE anamneses      ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE documentos     ENABLE ROW LEVEL SECURITY;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $rls$;
+
+DO $pol$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='pacientes' AND policyname='anon_all') THEN
+    CREATE POLICY "anon_all" ON configuracoes   FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "anon_all" ON pacientes       FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "anon_all" ON agendamentos    FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "anon_all" ON faturas         FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "anon_all" ON evolucoes       FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "anon_all" ON cartoes         FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "anon_all" ON tarefas_cartao  FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "anon_all" ON anamneses       FOR ALL USING (true) WITH CHECK (true);
+    CREATE POLICY "anon_all" ON documentos      FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+END $pol$;
+
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
+
+DO $trg$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='t_pac_upd') THEN
+    CREATE TRIGGER t_pac_upd  BEFORE UPDATE ON pacientes    FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
+    CREATE TRIGGER t_ag_upd   BEFORE UPDATE ON agendamentos FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
+    CREATE TRIGGER t_cart_upd BEFORE UPDATE ON cartoes      FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
+  END IF;
+END $trg$;
+
+INSERT INTO configuracoes (id, dados) VALUES ('nexopsi', '{"psicologa":{"nome":"Mariane Galani","crp":"06/XXXXX","email":"","whatsapp":"","endereco":"","cidade":"Jundiaí, SP"},"financeiro":{"valorSessaoPadrao":180,"metaMensalFaturamento":10000,"chavePix":""}}') ON CONFLICT (id) DO NOTHING;
 `
 
-// Extrai o ref do projeto da URL do Supabase
-function extractProjectRef(url: string): string {
-  return url.replace('https://', '').split('.')[0]
-}
-
 export async function GET() {
-  const url    = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const dbUrl  = process.env.DATABASE_URL
   const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const url    = process.env.NEXT_PUBLIC_SUPABASE_URL
 
-  if (!url) return NextResponse.json({ ok: false, error: 'NEXT_PUBLIC_SUPABASE_URL não configurada' }, { status: 400 })
-  if (!svcKey) return NextResponse.json({ ok: false, error: 'SUPABASE_SERVICE_ROLE_KEY não configurada na Vercel' }, { status: 400 })
-
-  const ref = extractProjectRef(url)
-
-  try {
-    // Supabase Management API — executa SQL com privilégio total
-    const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${svcKey}`,
-      },
-      body: JSON.stringify({ query: SETUP_SQL }),
-    })
-
-    const body = await res.json().catch(() => ({}))
-
-    if (res.ok) {
-      return NextResponse.json({ ok: true, status: 'setup_complete' })
+  // Tentar via pg (connection string direta) — mais confiável para DDL
+  if (dbUrl) {
+    try {
+      const { Client } = await import('pg')
+      const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } })
+      await client.connect()
+      await client.query(SETUP_SQL)
+      await client.end()
+      return NextResponse.json({ ok: true, method: 'pg' })
+    } catch (e: any) {
+      console.error('[setup/pg]', e.message)
     }
-
-    return NextResponse.json({ ok: false, status: res.status, body }, { status: 500 })
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e.message }, { status: 500 })
   }
+
+  // Fallback: Supabase Management API com service_role
+  if (svcKey && url) {
+    const ref = url.replace('https://', '').split('.')[0]
+    try {
+      const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${svcKey}`,
+        },
+        body: JSON.stringify({ query: SETUP_SQL }),
+      })
+      if (res.ok) return NextResponse.json({ ok: true, method: 'management_api' })
+      const err = await res.text()
+      console.error('[setup/mgmt]', res.status, err)
+    } catch (e: any) {
+      console.error('[setup/mgmt]', e.message)
+    }
+  }
+
+  return NextResponse.json({ ok: false, error: 'Configure DATABASE_URL ou SUPABASE_SERVICE_ROLE_KEY na Vercel' }, { status: 500 })
 }
