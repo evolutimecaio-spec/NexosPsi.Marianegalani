@@ -9,7 +9,13 @@ import { getLocal, fmtData, fmtMoeda } from '@/lib/db'
 const DIAS  = ['Seg','Ter','Qua','Qui','Sex']
 const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
 const HORAS = ['08','09','10','11','12','13','14','15','16','17','18']
-const fmt = (d: Date) => d.toISOString().slice(0,10)
+// Formata data em horário LOCAL (evita bug de timezone UTC-3 do Brasil)
+const fmt = (d: Date) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
 function addWeeks(date: Date, weeks: number) {
   const d = new Date(date); d.setDate(d.getDate() + weeks * 7); return d
@@ -51,6 +57,8 @@ export default function Agenda() {
     if (!formPacId || !modalNova) { toast('Selecione um paciente','danger'); return }
     const pac = pacientes.find(p => p.id === formPacId)
     if (!pac) { toast('Paciente não encontrado','danger'); return }
+    // Normalizar hora para HH:MM (ex: '9:00' → '09:00')
+    const horaNorm = modalNova.hora.padStart(5, '0').replace(/^(\d):/, '0$1:')
     setSaving(true)
     try {
       if (recorrente) {
@@ -59,7 +67,7 @@ export default function Agenda() {
         const promises = Array.from({ length: semanas }, (_, i) => {
           const d = addWeeks(base, i)
           return DB.addAgendamento({
-            paciente_id: pac.id, data: fmt(d), hora: modalNova.hora,
+            paciente_id: pac.id, data: fmt(d), hora: horaNorm,
             tipo: formTipo, modalidade: formModal, local_id: pac.local_id, valor_sessao: pac.valor_sessao,
           })
         })
@@ -67,7 +75,7 @@ export default function Agenda() {
         toast(`${semanas} sessões recorrentes agendadas!`)
       } else {
         await DB.addAgendamento({
-          paciente_id: pac.id, data: modalNova.data, hora: modalNova.hora,
+          paciente_id: pac.id, data: modalNova.data, hora: horaNorm,
           tipo: formTipo, modalidade: formModal, local_id: pac.local_id, valor_sessao: pac.valor_sessao,
         })
         toast('Sessão agendada!')
@@ -131,7 +139,9 @@ export default function Agenda() {
                   const dia=new Date(dom); dia.setDate(dom.getDate()+di)
                   const dataStr=fmt(dia)
                   const cells=ags.filter(a=>{
-                    if(a.data!==dataStr||a.hora.slice(0,2)!==h) return false
+                    // Normalizar hora do banco (ex: '9:00' → '09:00')
+                    const horaBanco = a.hora?.padStart(5,'0').replace(/^(\d):/, '0$1:') || ''
+                    if(a.data!==dataStr||horaBanco.slice(0,2)!==h) return false
                     if(filtroLocal&&(a.local_id||(a.paciente as any)?.local_id)!==filtroLocal) return false
                     return true
                   })

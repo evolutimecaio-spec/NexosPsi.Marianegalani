@@ -35,7 +35,13 @@ export const getLocal = (id?: string | null): Local | null => LOCAIS[id ?? ''] ?
 export const getLocais = (): Local[] => Object.values(LOCAIS)
 
 // ── Helpers ──────────────────────────────────────────────────────
-export const today = () => new Date().toISOString().slice(0, 10)
+export const today = () => {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 export const fmtData = (str?: string | null): string => {
   if (!str) return '—'
   const [y, m, d] = str.slice(0, 10).split('-')
@@ -117,9 +123,9 @@ async function _fetchAgendamentos(filtros: {
     if (filtros.dataFim)    q = q.lte('data', filtros.dataFim)
     if (filtros.pacienteId) q = q.eq('paciente_id', filtros.pacienteId)
     const { data, error } = await q
-    if (error || !data) throw new Error('erro')
-    return data
-  } catch { return [] }
+    if (error) { console.warn('[DB] agendamentos:', error.message); return [] }
+    return data ?? []
+  } catch (e) { console.warn('[DB] agendamentos catch:', e); return [] }
 }
 
 export const getAgendamentos = (filtros: {

@@ -1,75 +1,65 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useStore } from '@/lib/store'
 import * as DB from '@/lib/db'
 import { useToast } from '@/components/ui'
 import type { Paciente, Evolucao } from '@/types'
 
 declare global {
-  interface Window {
-    SpeechRecognition: any
-    webkitSpeechRecognition: any
-  }
+  interface Window { SpeechRecognition: any; webkitSpeechRecognition: any }
 }
+
+type Status = 'idle'|'solicitando'|'gravando'|'encerrado'
 
 export default function SmartNotes() {
   const { pacientes } = useStore()
-  const [pacSel, setPacSel]         = useState<Paciente|null>(null)
-  const [evsSel, setEvsSel]         = useState<Evolucao[]>([])
-  const [recording, setRecording]   = useState(false)
-  const [seconds, setSeconds]       = useState(0)
+  const [pacSel, setPacSel]       = useState<Paciente|null>(null)
+  const [evsSel, setEvsSel]       = useState<Evolucao[]>([])
+  const [status, setStatus]       = useState<Status>('idle')
+  const [seconds, setSeconds]     = useState(0)
   const [transcript, setTranscript] = useState('')
-  const [interim, setInterim]       = useState('')
-  const [draft, setDraft]           = useState('')
-  const [showDraft, setShowDraft]   = useState(false)
-  const [saved, setSaved]           = useState(false)
-  const [cfgAuto, setCfgAuto]       = useState(true)
-  const [saving, setSaving]         = useState(false)
-  const [erro, setErro]             = useState('')
+  const [interim, setInterim]     = useState('')
+  const [draft, setDraft]         = useState('')
+  const [showDraft, setShowDraft] = useState(false)
+  const [saved, setSaved]         = useState(false)
+  const [saving, setSaving]       = useState(false)
+  const [statusMsg, setStatusMsg] = useState('')
 
-  // Refs para evitar stale closures
   const recordingRef  = useRef(false)
   const transcriptRef = useRef('')
   const timerRef      = useRef<NodeJS.Timeout|null>(null)
   const recognRef     = useRef<any>(null)
-  const toast         = useToast()
+  const streamRef     = useRef<MediaStream|null>(null)
+  const toast = useToast()
 
   const suportado = typeof window !== 'undefined' &&
     !!(window.SpeechRecognition || window.webkitSpeechRecognition)
-
-  useEffect(() => () => {
-    if (timerRef.current) clearInterval(timerRef.current)
-    if (recognRef.current) try { recognRef.current.abort() } catch {}
-  }, [])
-
-  const selectPac = async (id: string) => {
-    const p = pacientes.find(x => x.id === id) || null
-    setPacSel(p)
-    if (p) setEvsSel(await DB.getEvolucoes(p.id))
-  }
 
   const fmtTime = (s: number) =>
     `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
 
   const gerarDraft = useCallback((texto: string) => {
-    if (!texto.trim()) return
+    if (!texto.trim()) { toast('Nenhuma fala detectada. Verifique o microfone.', 'danger'); return }
+    const frases = texto.split(/[.!?]/).filter(f => f.trim())
     setDraft(
-      `Queixa principal:\n${texto.split(/[.!?]/)[0]?.trim() || '—'}.\n\n` +
+      `Queixa principal:\n${frases[0]?.trim() || '—'}.\n\n` +
       `Conteúdo da sessão:\n${texto.trim()}\n\n` +
       `Plano para próxima sessão:\n`
     )
     setShowDraft(true)
   }, [])
 
-  const criarReconhecedor = useCallback(() => {
+  const criarRecognizer = useCallback(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) return null
-
     const r = new SR()
     r.lang = 'pt-BR'
     r.continuous = true
     r.interimResults = true
     r.maxAlternatives = 1
+
+    r.onstart = () => {
+      setStatusMsg('Microfone ativo — fale normalmente')
+    }
 
     r.onresult = (event: any) => {
       let finalChunk = ''
@@ -86,29 +76,28 @@ export default function SmartNotes() {
       setInterim(interimChunk)
     }
 
-    r.onerror = (event: any) => {
-      if (event.error === 'no-speech') return
-      if (event.error === 'not-allowed') {
-        setErro('Permissão de microfone negada. Clique no cadeado na barra de endereços e permita o microfone.')
-        stopRec()
-        return
-      }
-      if (event.error === 'network') {
-        setErro('Erro de rede. A transcrição requer conexão com internet.')
-        return
-      }
-      console.warn('SpeechRecognition error:', event.error)
+    r.onspeechend = () => {
+      setStatusMsg('Silêncio detectado...')
     }
 
-    // onend: reiniciar automaticamente se ainda estiver gravando
+    r.onerror = (event: any) => {
+      console.warn('speech error:', event.error)
+      if (event.error === 'not-allowed') {
+        setStatusMsg('Permissão de microfone negada!')
+        stopRec()
+      } else if (event.error === 'network') {
+        setStatusMsg('Erro de rede — verifique sua conexão')
+      } else if (event.error === 'no-speech') {
+        setStatusMsg('Nenhuma fala detectada, continue...')
+      }
+    }
+
     r.onend = () => {
       if (!recordingRef.current) return
+      setStatusMsg('Reconectando...')
       try {
-        const novo = criarReconhecedor()
-        if (novo) {
-          recognRef.current = novo
-          novo.start()
-        }
+        recognRef.current = criarRecognizer()
+        recognRef.current.start()
       } catch (e) {
         console.warn('restart error:', e)
       }
@@ -117,42 +106,73 @@ export default function SmartNotes() {
     return r
   }, [])
 
-  const startRec = () => {
+  const startRec = async () => {
     if (!pacSel) { toast('Selecione um paciente primeiro', 'danger'); return }
     if (!suportado) { toast('Use Google Chrome ou Microsoft Edge', 'danger'); return }
 
-    setErro('')
-    setRecording(true)
-    recordingRef.current = true
-    setSeconds(0)
+    setStatus('solicitando')
+    setStatusMsg('Solicitando permissão do microfone...')
     setTranscript('')
     setInterim('')
     transcriptRef.current = ''
     setShowDraft(false)
     setSaved(false)
 
+    // Pedir permissão explícita — liberar imediatamente para o SpeechRecognition usar
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // Liberar o mic imediatamente — SpeechRecognition precisa do acesso exclusivo
+      stream.getTracks().forEach(t => t.stop())
+      setStatusMsg('Permissão concedida! Iniciando reconhecimento...')
+    } catch (err: any) {
+      setStatus('idle')
+      if (err.name === 'NotAllowedError') {
+        setStatusMsg('Permissão negada. Clique no cadeado na barra de endereços e permita o microfone.')
+        toast('Permissão de microfone negada. Permita o acesso e tente novamente.', 'danger')
+      } else {
+        setStatusMsg('Microfone não encontrado.')
+        toast('Microfone não encontrado.', 'danger')
+      }
+      return
+    }
+
+    // Iniciar reconhecimento
+    recordingRef.current = true
+    setStatus('gravando')
+    setSeconds(0)
     timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000)
 
-    const r = criarReconhecedor()
-    if (r) {
+    try {
+      const r = criarRecognizer()
       recognRef.current = r
-      try { r.start() } catch (e) { console.warn(e) }
+      r.start()
+    } catch (e: any) {
+      toast('Erro ao iniciar reconhecimento: ' + e.message, 'danger')
+      setStatus('idle')
+      recordingRef.current = false
+      if (timerRef.current) clearInterval(timerRef.current)
     }
   }
 
-  const stopRec = () => {
+  const stopRec = useCallback(() => {
     recordingRef.current = false
-    setRecording(false)
+    setStatus('encerrado')
     setInterim('')
+    setStatusMsg('')
     if (timerRef.current) clearInterval(timerRef.current)
     if (recognRef.current) {
       try { recognRef.current.onend = null; recognRef.current.abort() } catch {}
       recognRef.current = null
     }
-    if (cfgAuto) {
-      const texto = transcriptRef.current
-      setTimeout(() => gerarDraft(texto), 200)
-    }
+    // Stream já foi liberado imediatamente após obter permissão
+    const texto = transcriptRef.current
+    setTimeout(() => gerarDraft(texto), 300)
+  }, [gerarDraft])
+
+  const selectPac = async (id: string) => {
+    const p = pacientes.find(x => x.id === id) || null
+    setPacSel(p)
+    if (p) setEvsSel(await DB.getEvolucoes(p.id))
   }
 
   const salvar = async () => {
@@ -167,26 +187,20 @@ export default function SmartNotes() {
     finally { setSaving(false) }
   }
 
+  const isGravando = status === 'gravando'
+
   return (
     <div>
-      {/* Banner */}
       <div style={{background:'var(--luma-light)',border:'1px solid #C8BEF0',borderRadius:10,padding:'12px 16px',marginBottom:20,display:'flex',alignItems:'center',gap:12}}>
         <div style={{width:28,height:28,borderRadius:8,background:'var(--luma)',color:'#fff',fontSize:13,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>L</div>
-        <div>
+        <div style={{flex:1}}>
           <div style={{fontSize:13,fontWeight:700,color:'var(--luma)'}}>LUMA ativada</div>
           <div style={{fontSize:12,color:'var(--luma-mid)'}}>
-            {suportado
-              ? 'Selecione o paciente, grave a sessão em português e salve a evolução com 1 clique.'
-              : 'Transcrição requer Google Chrome ou Microsoft Edge.'}
+            {suportado ? 'Grave a sessão em português e salve a evolução com 1 clique.' : 'Use Google Chrome ou Microsoft Edge para transcrição.'}
           </div>
         </div>
+        {!suportado && <span style={{fontSize:11,background:'#FFF0F0',color:'var(--danger)',padding:'3px 8px',borderRadius:6,fontWeight:600}}>Navegador incompatível</span>}
       </div>
-
-      {erro && (
-        <div style={{background:'#FFF0F0',border:'1px solid #FFCDD2',borderRadius:8,padding:'10px 14px',marginBottom:14,fontSize:13,color:'var(--danger)'}}>
-          <i className="ti ti-alert-circle" style={{marginRight:6}}/>{erro}
-        </div>
-      )}
 
       <div style={{display:'grid',gridTemplateColumns:'1fr 320px',gap:16}}>
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
@@ -201,54 +215,61 @@ export default function SmartNotes() {
               </select>
             </div>
 
-            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:16,padding:'20px 0'}}>
-              <div style={{fontSize:40,fontWeight:800,color:'var(--text)',fontVariantNumeric:'tabular-nums',letterSpacing:'0.05em'}}>
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:14,padding:'16px 0'}}>
+              <div style={{fontSize:40,fontWeight:800,color:'var(--text)',fontVariantNumeric:'tabular-nums'}}>
                 {fmtTime(seconds)}
               </div>
 
-              {/* Waveform */}
-              <div style={{display:'flex',gap:4,alignItems:'center',height:36}}>
+              {/* Indicador de áudio */}
+              <div style={{display:'flex',gap:3,alignItems:'center',height:36}}>
                 {Array.from({length:11}).map((_,i)=>(
                   <div key={i} style={{
                     width:5, borderRadius:3,
-                    height: recording ? `${8 + (i % 3 === 0 ? 20 : i % 3 === 1 ? 12 : 16)}px` : '6px',
-                    background: recording ? 'var(--teal)' : 'var(--border)',
-                    transition:'height 0.3s ease',
-                    animation: recording ? `wave ${0.8 + i*0.1}s ease-in-out infinite alternate` : 'none',
+                    height: isGravando ? `${8 + Math.abs(Math.sin(i * 0.8) * 20)}px` : '6px',
+                    background: isGravando ? 'var(--teal)' : 'var(--border)',
+                    animation: isGravando ? `wave${i%3} ${0.6+i*0.08}s ease-in-out infinite alternate` : 'none',
                   }}/>
                 ))}
               </div>
-              <style>{`@keyframes wave { from { height: 6px } to { height: 28px } }`}</style>
+              <style>{`
+                @keyframes wave0{from{height:6px}to{height:28px}}
+                @keyframes wave1{from{height:6px}to{height:20px}}
+                @keyframes wave2{from{height:6px}to{height:24px}}
+              `}</style>
 
+              {/* Botão */}
               <button
-                onClick={recording ? stopRec : startRec}
-                disabled={!suportado}
+                onClick={isGravando ? stopRec : startRec}
+                disabled={!suportado || status === 'solicitando'}
                 style={{
                   width:72,height:72,borderRadius:'50%',border:'none',
-                  cursor: suportado ? 'pointer' : 'not-allowed',
+                  cursor: suportado && status !== 'solicitando' ? 'pointer' : 'not-allowed',
                   display:'flex',alignItems:'center',justifyContent:'center',
                   fontSize:28,color:'#fff',
-                  background: recording ? 'var(--danger)' : 'var(--teal)',
-                  boxShadow: recording
-                    ? '0 0 0 10px rgba(198,40,40,0.12)'
-                    : '0 4px 20px rgba(32,128,160,0.4)',
+                  background: status === 'solicitando' ? 'var(--border)' : isGravando ? 'var(--danger)' : 'var(--teal)',
+                  boxShadow: isGravando ? '0 0 0 10px rgba(198,40,40,0.12)' : '0 4px 20px rgba(32,128,160,0.4)',
                   transition:'all 0.2s',
                 }}>
-                <i className={`ti ti-${recording ? 'player-stop-filled' : 'microphone'}`}/>
+                <i className={`ti ti-${status === 'solicitando' ? 'loader' : isGravando ? 'player-stop-filled' : 'microphone'}`}/>
               </button>
 
-              <div style={{fontSize:12,color:'var(--text3)',textAlign:'center'}}>
-                {!pacSel ? 'Selecione o paciente e clique no microfone'
-                  : recording ? `Gravando — ${pacSel.nome} — fale normalmente`
-                  : seconds > 0 ? `Gravação encerrada · ${fmtTime(seconds)}`
-                  : 'Pronto para gravar'}
+              {/* Status em tempo real */}
+              <div style={{fontSize:12,textAlign:'center',minHeight:18}}>
+                {statusMsg
+                  ? <span style={{color: statusMsg.includes('negada') || statusMsg.includes('Erro') ? 'var(--danger)' : isGravando ? 'var(--teal)' : 'var(--text3)'}}>{statusMsg}</span>
+                  : <span style={{color:'var(--text3)'}}>
+                      {status === 'idle' && !pacSel && 'Selecione o paciente e clique no microfone'}
+                      {status === 'idle' && pacSel && 'Clique no microfone para iniciar'}
+                      {status === 'encerrado' && `Gravação encerrada · ${fmtTime(seconds)}`}
+                    </span>
+                }
               </div>
             </div>
 
             {/* Transcrição */}
             <div style={{background:'var(--warm)',border:'1px solid var(--border)',borderRadius:8,padding:13,minHeight:100}}>
               <div style={{fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8,display:'flex',alignItems:'center',gap:6}}>
-                {recording && <div style={{width:8,height:8,borderRadius:'50%',background:'var(--danger)',animation:'pulse 1s infinite'}}/>}
+                {isGravando && <div style={{width:8,height:8,borderRadius:'50%',background:'var(--danger)',animation:'pulse 1s infinite'}}/>}
                 Transcrição ao vivo
               </div>
               <div style={{fontSize:13,lineHeight:1.7,minHeight:60,wordBreak:'break-word'}}>
@@ -256,19 +277,11 @@ export default function SmartNotes() {
                 {interim && <span style={{color:'var(--text3)',fontStyle:'italic'}}>{interim}</span>}
                 {!transcript && !interim && (
                   <span style={{color:'var(--text3)',fontStyle:'italic'}}>
-                    {recording
-                      ? 'Aguardando fala... fale próximo ao microfone'
-                      : 'A transcrição aparecerá aqui durante a gravação...'}
+                    {isGravando ? 'Aguardando fala...' : 'A transcrição aparecerá aqui durante a gravação...'}
                   </span>
                 )}
               </div>
             </div>
-
-            {!cfgAuto && transcript && !showDraft && (
-              <button className="btn btn-ghost" style={{marginTop:10}} onClick={()=>gerarDraft(transcript)}>
-                <i className="ti ti-sparkles"/>Gerar rascunho com LUMA
-              </button>
-            )}
           </div>
 
           {showDraft && (
@@ -284,24 +297,18 @@ export default function SmartNotes() {
                 style={{width:'100%',background:'#fff',border:'1px solid #DDD8F8',borderRadius:6,padding:'10px 12px',fontSize:13,color:'var(--text2)',lineHeight:1.65,resize:'vertical',fontFamily:'var(--font)'}}/>
               <div style={{display:'flex',gap:8,marginTop:10}}>
                 <button onClick={salvar} disabled={saving}
-                  style={{flex:1,justifyContent:'center',background:'var(--luma)',color:'#fff',border:'none',borderRadius:8,padding:'9px 14px',fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:6,opacity:saving?0.6:1}}>
-                  <i className="ti ti-device-floppy"/>
-                  {saving ? 'Salvando...' : 'Salvar no prontuário'}
+                  style={{flex:1,background:'var(--luma)',color:'#fff',border:'none',borderRadius:8,padding:'9px 14px',fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,opacity:saving?0.6:1}}>
+                  <i className="ti ti-device-floppy"/>{saving?'Salvando...':'Salvar no prontuário'}
                 </button>
                 <button className="btn btn-ghost" onClick={()=>setShowDraft(false)}>
                   <i className="ti ti-x"/>Descartar
                 </button>
               </div>
-              {saved && (
-                <div style={{marginTop:10,fontSize:12,color:'var(--success)',background:'var(--success-bg)',padding:'8px 12px',borderRadius:8,textAlign:'center'}}>
-                  <i className="ti ti-check"/> Evolução salva!
-                </div>
-              )}
+              {saved && <div style={{marginTop:10,fontSize:12,color:'var(--success)',background:'var(--success-bg)',padding:'8px 12px',borderRadius:8,textAlign:'center'}}><i className="ti ti-check"/> Evolução salva!</div>}
             </div>
           )}
         </div>
 
-        {/* Lateral */}
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
           {pacSel && (
             <div className="card">
@@ -319,27 +326,35 @@ export default function SmartNotes() {
           )}
 
           <div className="card">
-            <div className="card-title" style={{color:'var(--luma)'}}><i className="ti ti-settings" style={{color:'var(--luma)'}}/>Config. LUMA</div>
-            <label style={{display:'flex',alignItems:'center',gap:8,fontSize:13,cursor:'pointer',marginBottom:12}}>
-              <input type="checkbox" checked={cfgAuto} onChange={e=>setCfgAuto(e.target.checked)} style={{accentColor:'var(--luma)',width:16,height:16}}/>
-              Gerar evolução ao parar gravação
-            </label>
-            <div style={{fontSize:11,color:'var(--text3)',lineHeight:1.7,background:'var(--warm)',padding:'8px 10px',borderRadius:8}}>
-              <i className="ti ti-info-circle" style={{marginRight:5}}/>
-              Requer <strong>Chrome</strong> ou <strong>Edge</strong>.<br/>
-              Fale em <strong>português</strong> claramente.<br/>
-              Permita acesso ao microfone quando solicitado.
+            <div className="card-title" style={{color:'var(--luma)'}}><i className="ti ti-settings" style={{color:'var(--luma)'}}/>Como usar</div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {[
+                ['1', 'Selecione o paciente'],
+                ['2', 'Clique no microfone'],
+                ['3', 'Permita o acesso quando o Chrome perguntar'],
+                ['4', 'Fale normalmente em português'],
+                ['5', 'Clique em parar — a LUMA gera o rascunho'],
+                ['6', 'Revise e salve no prontuário'],
+              ].map(([n, t]) => (
+                <div key={n} style={{display:'flex',gap:8,alignItems:'flex-start'}}>
+                  <div style={{width:20,height:20,borderRadius:'50%',background:'var(--luma)',color:'#fff',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>{n}</div>
+                  <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.4}}>{t}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{marginTop:12,padding:'8px 10px',background:'#FFF8E1',borderRadius:8,fontSize:11,color:'#7A5800'}}>
+              <i className="ti ti-alert-triangle" style={{marginRight:5}}/>
+              Funciona apenas no <strong>Chrome</strong> ou <strong>Edge</strong>
             </div>
           </div>
 
           <div className="card">
             <div className="card-title"><i className="ti ti-history"/>Últimas sessões LUMA</div>
-            {!pacSel
-              ? <div style={{fontSize:12,color:'var(--text3)'}}>Selecione um paciente.</div>
+            {!pacSel ? <div style={{fontSize:12,color:'var(--text3)'}}>Selecione um paciente.</div>
               : evsSel.filter(e=>e.gerado_luma).length === 0
-              ? <div style={{fontSize:12,color:'var(--text3)'}}>Nenhuma sessão LUMA registrada.</div>
+              ? <div style={{fontSize:12,color:'var(--text3)'}}>Nenhuma sessão LUMA ainda.</div>
               : evsSel.filter(e=>e.gerado_luma).slice(0,5).map(e=>(
-                  <div key={e.id} style={{padding:'8px 0',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+                  <div key={e.id} style={{padding:'8px 0',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',gap:8}}>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>{DB.fmtData(e.data)}</div>
                       <div style={{fontSize:12,color:'var(--text2)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.texto.slice(0,50)}...</div>

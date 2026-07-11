@@ -22,8 +22,14 @@ export async function serverGetPacientes(): Promise<Paciente[]> {
 
 export async function serverGetAgendamentosHoje(): Promise<Agendamento[]> {
   try {
-    const sb = makeClient(); if (!sb) return DEMO_AGENDAMENTOS.filter(a => a.data === new Date().toISOString().slice(0,10))
-    const hoje = new Date().toISOString().slice(0,10)
+    const sb = makeClient(); if (!sb) return DEMO_AGENDAMENTOS.filter(a => a.data === (() => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+})())
+    const hoje = (() => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+})()
     const { data, error } = await sb.from('agendamentos')
       .select('*, paciente:pacientes(id,nome,avatar,fone,local_id,valor_sessao)')
       .eq('data', hoje).order('hora')
@@ -36,7 +42,10 @@ export async function serverGetAgendamentosHoje(): Promise<Agendamento[]> {
 export async function serverGetInadimplentes(): Promise<Inadimplente[]> {
   try {
     const sb = makeClient(); if (!sb) return DEMO_INADIMPLENTES
-    const hoje = new Date().toISOString().slice(0,10)
+    const hoje = (() => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+})()
     const { data, error } = await sb.from('faturas')
       .select('*, paciente:pacientes(id,nome,fone,local_id)')
       .eq('pago', false).lte('vencimento', hoje).order('vencimento')
