@@ -126,7 +126,7 @@ export const getAgendamentos = (filtros: {
   data?: string; dataIni?: string; dataFim?: string; pacienteId?: string
 } = {}) => {
   const key = `ags:${JSON.stringify(filtros)}`
-  return cached(key, 30_000, () => _fetchAgendamentos(filtros))
+  return cached(key, 5_000, () => _fetchAgendamentos(filtros))
 }
 
 export const getAgendamentosDia  = (d: string) => getAgendamentos({ data: d })
@@ -144,6 +144,7 @@ export async function addAgendamento(ag: {
     }).select(AGS_SELECT).single()
     if (error || !data) throw new Error(error?.message || 'Erro ao agendar')
     invalidate('ags:')
+    invalidate('dashboard')
     return data
   })
 }

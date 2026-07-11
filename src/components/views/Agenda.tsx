@@ -35,9 +35,13 @@ export default function Agenda() {
   const dom  = new Date(hoje); dom.setDate(hoje.getDate() - hoje.getDay() + 1 + offset*7)
   const sex  = new Date(dom);  sex.setDate(dom.getDate() + 4)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (currentOffset?: number) => {
+    const off = currentOffset ?? offset
+    const hoje2 = new Date()
+    const dom2 = new Date(hoje2); dom2.setDate(hoje2.getDate() - hoje2.getDay() + 1 + off*7)
+    const sex2 = new Date(dom2); sex2.setDate(dom2.getDate() + 4)
     setLoading(true)
-    try { setAgs(await DB.getAgendamentosSemana(fmt(dom), fmt(sex))) }
+    try { setAgs(await DB.getAgendamentosSemana(fmt(dom2), fmt(sex2))) }
     finally { setLoading(false) }
   }, [offset])
 
@@ -69,7 +73,9 @@ export default function Agenda() {
         toast('Sessão agendada!')
       }
       setModalNova(null); setFormPacId(''); setRecorrente(false)
-      await load(); reload('agenda')
+      // Aguardar um tick para garantir que o banco processou
+      await new Promise(r => setTimeout(r, 300))
+      await load(offset); reload('agenda')
     } catch(e:any){ toast(erroLegivel(e),'danger') }
     finally { setSaving(false) }
   }
